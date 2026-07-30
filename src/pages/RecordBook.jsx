@@ -246,38 +246,6 @@ export default function RecordBook() {
       .sort((a, b) => b.value - a.value)
   }, [results])
 
-  // ---- Most-assigned team per member ----
-  // Results are the record of weeks actually played; assignments fill in any
-  // week that hasn't been written back as a result yet (i.e. the live season).
-  const favoriteTeams = useMemo(() => {
-    const tally = {}
-    const seen = new Set()
-
-    results.forEach((r) => {
-      const n = r.members?.name
-      if (!n || !r.team_abbr) return
-      seen.add(`${r.season_id}|${r.week}|${r.member_id}`)
-      if (!tally[n]) tally[n] = {}
-      tally[n][r.team_abbr] = (tally[n][r.team_abbr] || 0) + 1
-    })
-
-    assignments.forEach((a) => {
-      const n = a.members?.name
-      if (!n || !a.team_abbr) return
-      if (seen.has(`${a.season_id}|${a.week}|${a.member_id}`)) return
-      if (!tally[n]) tally[n] = {}
-      tally[n][a.team_abbr] = (tally[n][a.team_abbr] || 0) + 1
-    })
-
-    return Object.entries(tally)
-      .map(([name, teams]) => {
-        const sorted = Object.entries(teams).sort((a, b) => b[1] - a[1])
-        const [team, count] = sorted[0]
-        return { name, team, count, total: sorted.reduce((s, [, c]) => s + c, 0) }
-      })
-      .sort((a, b) => a.name.localeCompare(b.name))
-  }, [results, assignments])
-
   // Distinct season+week combinations, not row count.
   const weeksRecorded = useMemo(
     () => new Set(results.map((r) => `${r.season_id}|${r.week}`)).size,
