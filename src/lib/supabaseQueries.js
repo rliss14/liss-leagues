@@ -27,7 +27,7 @@ export async function getCurrentSeason() {
   return data
 }
 
-// ---- Weekly assignments (who owns which team, per week, per season) ----
+// ---- Weekly assignments ----
 export async function getAssignments(seasonId) {
   const { data, error } = await supabase
     .from('weekly_assignments')
@@ -38,15 +38,22 @@ export async function getAssignments(seasonId) {
   return data
 }
 
+export async function getAllAssignments() {
+  const { data, error } = await supabase
+    .from('weekly_assignments')
+    .select('*, members(name), seasons(label, start_year)')
+  if (error) throw error
+  return data
+}
+
 export async function upsertAssignments(rows) {
-  // rows: [{ season_id, week, member_id, team_abbr }]
   const { error } = await supabase
     .from('weekly_assignments')
     .upsert(rows, { onConflict: 'season_id,week,member_id' })
   if (error) throw error
 }
 
-// ---- Weekly results (Record Book — historical + finalized-current rows) ----
+// ---- Weekly results ----
 export async function getResults(seasonId) {
   const { data, error } = await supabase
     .from('weekly_results')
@@ -57,29 +64,36 @@ export async function getResults(seasonId) {
   return data
 }
 
+// Every result row across every season, with season label attached.
 export async function getAllResults() {
   const { data, error } = await supabase
     .from('weekly_results')
-    .select('*, members(name), seasons(label)')
+    .select('*, members(name), seasons(label, start_year)')
   if (error) throw error
   return data
 }
 
 export async function upsertResults(rows) {
-  // rows: [{ season_id, week, member_id, team_abbr, opponent_abbr, score, win, amount_won, result_type }]
-  // result_type: 'hit33' | 'week18_payout' | null
   const { error } = await supabase
     .from('weekly_results')
     .upsert(rows, { onConflict: 'season_id,week,member_id' })
   if (error) throw error
 }
 
-// ---- Season awards (best/worst cumulative diff, computed at season end) ----
+// ---- Season awards ----
 export async function getSeasonAwards(seasonId) {
   const { data, error } = await supabase
     .from('season_awards')
     .select('*, members(name)')
     .eq('season_id', seasonId)
+  if (error) throw error
+  return data
+}
+
+export async function getAllSeasonAwards() {
+  const { data, error } = await supabase
+    .from('season_awards')
+    .select('*, members(name), seasons(label, start_year)')
   if (error) throw error
   return data
 }

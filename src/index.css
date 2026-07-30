@@ -2,13 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
-html, body, #root {
-  min-height: 100%;
-}
+html, body, #root { min-height: 100%; }
 
 body {
   background: radial-gradient(circle at top, #234a3a 0%, #122a21 70%);
-  font-family: 'Inter', sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Modern display type: tight tracking, no serif flourish */
+.display {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  letter-spacing: -0.02em;
+  font-weight: 600;
 }
 
 .felt-panel {
@@ -17,6 +23,8 @@ body {
   box-shadow: inset 0 0 60px rgba(0,0,0,0.35);
 }
 
-.stitch-divider {
-  border-top: 2px dashed rgba(212,160,23,0.4);
+.stat-card {
+  background: rgba(18,42,33,0.55);
+  border: 1px solid rgba(212,160,23,0.18);
+  border-radius: 0.75rem;
 }

@@ -10,6 +10,9 @@ edit any code — just follow these steps once. It takes about 20-30 minutes.
 3. Once it's created, open the **SQL Editor** (left sidebar) → **New query**.
 4. Open `supabase/schema.sql` from this project, copy all of it, paste into the SQL editor, click **Run**.
    This creates all five tables (members, seasons, weekly_assignments, weekly_results, season_awards).
+   Then open a **new query**, paste in `supabase/migration-02.sql`, and Run that too — it adds the
+   `team_won_game` and `home_away` columns the Record Book splits need. (If you already ran schema.sql
+   on an earlier setup, you only need migration-02. It's safe to run on existing data — it only adds columns.)
 5. Go to **Project Settings → API**. Copy the **Project URL** and the **anon public** key — you'll need both in step 3.
 
 ## 2. Push this code to GitHub
@@ -48,25 +51,41 @@ Since Cloudflare DNS is already set up:
 
 ## 5. First-time data entry (in the live app)
 
-Open the site → **Setup** tab, in this order:
+Open the site → NFL33 → **Setup** tab, in this order:
 1. **Members** — paste all 32 names, one per line.
 2. **Seasons** — add each season (e.g. `2023-24`, start year `2023`). Mark the season currently being
    played as "current" and set its current week — that's what drives the Matchup Tracker and Live Tracker.
 3. **Weekly Assignments** — pick the current (or a past) season, paste your week/member/team rows.
    Use ESPN's standard team abbreviations (KC, SF, DAL, BUF, etc.) so live scores match up correctly.
-4. **Historical Results** — for past seasons only, paste in the full record book rows.
-   Leave `result_type` blank for a normal week; use `hit33` for a real 33-hit, `week18_payout` for the
-   week-18 closest-to-33 tie-break payout.
+4. **Historical Results** — for past seasons only, paste in the full result rows. Columns are now:
+   `week, member_name, team_abbr, opponent_abbr, score, team_won_game, home_away, amount_won, result_type`
+   - `team_won_game` — did the NFL team win that game? `w`/`l` (or blank if you don't have it)
+   - `home_away` — `h` or `a`
+   - `result_type` — blank for a normal week, `hit33` for a real 33-hit, `week18_payout` for the tie-break payout
+
+   The two middle columns are what power the win/loss and home/away splits in the Record Book. Blank is
+   fine — those hits just won't be counted in the splits until you fill them in.
 
 Everything else (Matchup Tracker, Live Season Tracker, Record Book, Season Awards, All-Time) reads from
 what you enter here — no other manual aggregate entry needed.
 
+## Site structure
+
+- `lissleagues.com` — pool picker (NFL33 live; NFL25 and Golf shown as Coming Soon)
+- `lissleagues.com/NFL33` — Matchups (live tracker)
+- `/NFL33/live` — Live Season Tracker
+- `/NFL33/teams` — Team Grid (members × weeks, green = hit 33)
+- `/NFL33/winners` — Winners (all seasons, paid results only)
+- `/NFL33/awards` — Season Awards (all seasons)
+- `/NFL33/record-book` — Record Book (all-time derived stats)
+- `/NFL33/setup` — data entry
+
 ## What's built vs. what's next
 
-- ✅ NFL 33 Point Pool: Matchup Tracker, Live Season Tracker, Record Book, Season Awards, All-Time, Setup.
+- ✅ NFL 33 Point Pool: Matchups, Live Season Tracker, Team Grid, Winners, Season Awards, Record Book, Setup.
 - ✅ Installable PWA (Add to Home Screen on iOS/Android; works offline for anything already loaded).
-- ⏳ Golf pool (phase 2) — not built yet, by design, per your priority order. The Supabase schema and
-  nav are structured so it can be added as a new set of tables + a new tab without touching the NFL pool.
+- ⏳ NFL25 and Golf pool — placeholder tiles on the landing page. The schema and routing are
+  structured so each can be added as its own set of tables and its own `/POOLNAME` route without touching NFL33.
 
 ## Notes on the ESPN data
 

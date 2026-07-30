@@ -26,7 +26,7 @@ export default function DataEntry() {
 
   return (
     <div className="space-y-6">
-      <h1 className="font-display text-3xl text-mustard">Setup</h1>
+      <h1 className="display text-3xl text-mustard">Setup</h1>
       <div className="flex gap-3 flex-wrap text-sm">
         {TABS.map((t) => (
           <button
@@ -193,7 +193,9 @@ function ResultsTab({ members, seasons, onSaved, setErr }) {
           team_abbr: r.team_abbr.toUpperCase(),
           opponent_abbr: r.opponent_abbr.toUpperCase(),
           score: Number(r.score),
-          win: /^(true|1|y|yes|win)$/i.test(r.win),
+          team_won_game: r.team_won_game === '' ? null : /^(true|1|y|yes|w|win)$/i.test(r.team_won_game),
+          home_away: /^h/i.test(r.home_away) ? 'home' : /^a/i.test(r.home_away) ? 'away' : null,
+          win: !!r.result_type,
           amount_won: r.amount_won ? Number(r.amount_won) : null,
           result_type: /hit/i.test(r.result_type) ? 'hit33' : /18|payout/i.test(r.result_type) ? 'week18_payout' : null
         }
@@ -208,16 +210,18 @@ function ResultsTab({ members, seasons, onSaved, setErr }) {
   return (
     <div className="space-y-3">
       <p className="text-chalk/70 text-sm">
-        Paste historical rows: <code>week, member_name, team_abbr, opponent_abbr, score, win, amount_won, result_type</code>.
+        Paste historical rows: <code>week, member_name, team_abbr, opponent_abbr, score, team_won_game, home_away, amount_won, result_type</code>.
+        <br /><code>team_won_game</code> = did the NFL team win that game (w/l, yes/no, or blank).
+        <code>home_away</code> = h or a. Both feed the Record Book splits.
         Leave <code>result_type</code> blank unless it's a real "hit33" or the "week18_payout" tie-break.
       </p>
       <select className="bg-felt-dark border border-mustard/40 rounded px-3 py-1.5 text-sm" value={seasonId} onChange={(e) => setSeasonId(e.target.value)}>
         {seasons.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
       </select>
       <PasteTable
-        columns={['week', 'member_name', 'team_abbr', 'opponent_abbr', 'score', 'win', 'amount_won', 'result_type']}
+        columns={['week', 'member_name', 'team_abbr', 'opponent_abbr', 'score', 'team_won_game', 'home_away', 'amount_won', 'result_type']}
         onParsed={setRows}
-        placeholder={'1\tAlex Smith\tKC\tBAL\t27\tfalse\t\t\n18\tJordan Lee\tSF\tLAR\t31\ttrue\t50\tweek18_payout'}
+        placeholder={'1\tAlex Smith\tKC\tBAL\t27\tw\th\t\t\n18\tJordan Lee\tSF\tLAR\t31\tl\ta\t50\tweek18_payout'}
       />
       <button onClick={save} disabled={!rows.length || !seasonId} className="bg-mustard text-felt-dark font-semibold px-4 py-2 rounded-md disabled:opacity-40">
         Save results

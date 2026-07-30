@@ -88,7 +88,7 @@ export default function LiveTracker() {
 
   return (
     <div className="space-y-4">
-      <h1 className="font-display text-3xl text-mustard">Live Season Tracker</h1>
+      <h1 className="display text-3xl text-mustard">Live Season Tracker</h1>
       <p className="text-chalk/70 text-sm">
         Running total of |33 − score| across finalized weeks so far this season. Lower is better.
       </p>

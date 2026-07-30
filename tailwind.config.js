@@ -21,9 +21,9 @@ export default {
         busted: '#5a6b62'
       },
       fontFamily: {
-        display: ['Fraunces', 'serif'],
+        display: ['"Space Grotesk"', 'system-ui', 'sans-serif'],
         body: ['"Inter"', 'system-ui', 'sans-serif'],
-        mono: ['"IBM Plex Mono"', 'ui-monospace', 'monospace']
+        mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace']
       },
       boxShadow: {
         felt: 'inset 0 0 60px rgba(0,0,0,0.35)'
