@@ -1,5 +1,24 @@
 import { supabase } from '../supabaseClient'
 
+// Supabase/PostgREST caps every response at 1000 rows by default. A single
+// season is 18 weeks x 32 members = 576 rows, so any multi-season query blows
+// straight past that. Everything unbounded goes through fetchAllPaged.
+const PAGE_SIZE = 1000
+
+async function fetchAllPaged(buildQuery) {
+  const out = []
+  let from = 0
+  for (;;) {
+    // A PostgREST builder can only be used once, so rebuild it each pass.
+    const { data, error } = await buildQuery().range(from, from + PAGE_SIZE - 1)
+    if (error) throw error
+    out.push(...(data || []))
+    if (!data || data.length < PAGE_SIZE) break
+    from += PAGE_SIZE
+  }
+  return out
+}
+
 // ---- Members ----
 export async function getMembers() {
   const { data, error } = await supabase.from('members').select('*').order('name')
@@ -29,78 +48,53 @@ export async function getCurrentSeason() {
 
 // ---- Weekly assignments ----
 export async function getAssignments(seasonId) {
-  const { data, error } = await supabase
-    .from('weekly_assignments')
-    .select('*, members(name)')
-    .eq('season_id', seasonId)
-    .order('week')
-  if (error) throw error
-  return data
-}
-
-export async function getAllAssignments() {
-  const { data, error } = await supabase
-    .from('weekly_assignments')
-    .select('*, members(name), seasons(label, start_year)')
-  if (error) throw error
-  return data
+  return fetchAllPaged(() =>
+    supabase
+      .from('weekly_assignments')
+      .select('*, members(name)')
+      .eq('season_id', seasonId)
+      .order('week')
+  )
 }
 
 export async function upsertAssignments(rows) {
-  const { error } = await supabase
-    .from('weekly_assignments')
-    .upsert(rows, { onConflict: 'season_id,week,member_id' })
-  if (error) throw error
+  const CHUNK = 500
+  for (let i = 0; i < rows.length; i += CHUNK) {
+    const { error } = await supabase
+      .from('weekly_assignments')
+      .upsert(rows.slice(i, i + CHUNK), { onConflict: 'season_id,week,member_id' })
+    if (error) throw error
+  }
 }
 
 // ---- Weekly results ----
 export async function getResults(seasonId) {
-  const { data, error } = await supabase
-    .from('weekly_results')
-    .select('*, members(name)')
-    .eq('season_id', seasonId)
-    .order('week')
-  if (error) throw error
-  return data
+  return fetchAllPaged(() =>
+    supabase
+      .from('weekly_results')
+      .select('*, members(name)')
+      .eq('season_id', seasonId)
+      .order('week')
+  )
 }
 
-// Every result row across every season, with season label attached.
 export async function getAllResults() {
-  const { data, error } = await supabase
-    .from('weekly_results')
-    .select('*, members(name), seasons(label, start_year)')
-  if (error) throw error
-  return data
+  return fetchAllPaged(() =>
+    supabase
+      .from('weekly_results')
+      .select('*, members(name), seasons(label, start_year)')
+      .order('id')
+  )
 }
 
 export async function upsertResults(rows) {
-  const { error } = await supabase
-    .from('weekly_results')
-    .upsert(rows, { onConflict: 'season_id,week,member_id' })
-  if (error) throw error
-}
-
-// ---- Season awards ----
-export async function getSeasonAwards(seasonId) {
-  const { data, error } = await supabase
-    .from('season_awards')
-    .select('*, members(name)')
-    .eq('season_id', seasonId)
-  if (error) throw error
-  return data
-}
-
-export async function getAllSeasonAwards() {
-  const { data, error } = await supabase
-    .from('season_awards')
-    .select('*, members(name), seasons(label, start_year)')
-  if (error) throw error
-  return data
-}
-
-export async function upsertSeasonAwards(rows) {
-  const { error } = await supabase
-    .from('season_awards')
-    .upsert(rows, { onConflict: 'season_id,award_type' })
-  if (error) throw error
+  // Chunk writes too — a full season pasted at once exceeds a comfortable
+  // single-request payload.
+  const CHUNK = 500
+  for (let i = 0; i < rows.length; i += CHUNK) {
+    const { error } = await supabase
+      .from('weekly_results')
+      .upsert(rows.slice(i, i + CHUNK), { onConflict: 'season_id,week,member_id' })
+    if (error) throw error
+  }
 }

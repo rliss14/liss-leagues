@@ -1,115 +1,117 @@
-import { useEffect, useMemo, useState } from 'react'
-import { getAllResults } from '../lib/supabaseQueries'
-import { money } from '../lib/format'
+# Liss Leagues — setup guide
 
-// Winners = paid results only. A row counts if it carries a result_type
-// (a real 33-hit or the week-18 guaranteed payout) or an amount won.
-function isWinner(r) {
-  return !!r.result_type || Number(r.amount_won || 0) > 0
-}
+This is the full source code for the "33 Point Pool" tracker. You don't need to
+edit any code — just follow these steps once. It takes about 20-30 minutes.
 
-export default function Winners() {
-  const [rows, setRows] = useState([])
-  const [err, setErr] = useState(null)
-  const [filter, setFilter] = useState('all')
+## 1. Create the Supabase project (free tier)
 
-  useEffect(() => {
-    getAllResults().then(setRows).catch((e) => setErr(e.message))
-  }, [])
+1. Go to https://supabase.com and sign up / log in.
+2. Click **New project**. Name it `liss-leagues`, pick any region, set a database password (save it somewhere).
+3. Once it's created, open the **SQL Editor** (left sidebar) → **New query**.
+4. Open `supabase/schema.sql` from this project, copy all of it, paste into the SQL editor, click **Run**.
+   This creates all five tables (members, seasons, weekly_assignments, weekly_results, season_awards).
+   Then open a **new query**, paste in `supabase/migration-02.sql`, and Run that too — it adds the
+   `team_won_game` and `home_away` columns the Record Book splits need. (If you already ran schema.sql
+   on an earlier setup, you only need migration-02. It's safe to run on existing data — it only adds columns.)
+5. Go to **Project Settings → API**. Copy the **Project URL** and the **anon public** key — you'll need both in step 3.
 
-  const winners = useMemo(() => {
-    const list = rows.filter(isWinner)
-    list.sort((a, b) => {
-      const yearDiff = (b.seasons?.start_year || 0) - (a.seasons?.start_year || 0)
-      return yearDiff !== 0 ? yearDiff : a.week - b.week
-    })
-    if (filter === 'hit33') return list.filter((r) => r.result_type === 'hit33')
-    if (filter === 'week18') return list.filter((r) => r.result_type === 'week18_payout')
-    return list
-  }, [rows, filter])
+## 2. Push this code to GitHub
 
-  const totalPaid = winners.reduce((sum, r) => sum + Number(r.amount_won || 0), 0)
+1. Go to https://github.com/new, create a new **private** repository named `liss-leagues`.
+2. On your computer, download this whole project folder, then in a terminal inside the folder run:
+   ```
+   git init
+   git add .
+   git commit -m "Initial Liss Leagues build"
+   git branch -M main
+   git remote add origin https://github.com/YOUR-USERNAME/liss-leagues.git
+   git push -u origin main
+   ```
+   (If you don't have `git`/a terminal handy, GitHub also lets you drag-and-drop the folder's files
+   into a new repo from the web UI at github.com/new — no command line needed.)
 
-  return (
-    <div className="space-y-4">
-      <div className="flex items-end justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="display text-3xl text-mustard">Winners</h1>
-          <p className="text-sm text-chalk/60">Every paid result, all seasons.</p>
-        </div>
-        <div className="flex gap-2 text-xs">
-          {[
-            ['all', 'All'],
-            ['hit33', '33s'],
-            ['week18', 'Wk18 Payouts']
-          ].map(([key, label]) => (
-            <button
-              key={key}
-              onClick={() => setFilter(key)}
-              className={`px-3 py-1.5 rounded-full border ${
-                filter === key
-                  ? 'bg-mustard text-felt-dark border-mustard font-semibold'
-                  : 'border-mustard/30 text-chalk/70'
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
+## 3. Connect Netlify
 
-      {err && <div className="text-brick-light">{err}</div>}
+1. Go to https://app.netlify.com → **Add new site → Import an existing project**.
+2. Choose GitHub, authorize, pick the `liss-leagues` repo.
+3. Build settings should auto-fill from `netlify.toml` (build command `npm run build`, publish folder `dist`) — leave them as is.
+4. Before deploying, click **Add environment variables** and add:
+   - `VITE_SUPABASE_URL` = the Project URL from step 1.5
+   - `VITE_SUPABASE_ANON_KEY` = the anon public key from step 1.5
+5. Click **Deploy site**. Netlify will build it (a few minutes) and give you a `*.netlify.app` URL.
 
-      <div className="felt-panel rounded-xl overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-mustard text-left text-xs uppercase tracking-wider">
-              <th className="px-3 py-2">Season</th>
-              <th className="px-3 py-2">Wk</th>
-              <th className="px-3 py-2">Member</th>
-              <th className="px-3 py-2">Team</th>
-              <th className="px-3 py-2">Opp</th>
-              <th className="px-3 py-2">Score</th>
-              <th className="px-3 py-2">Amount</th>
-              <th className="px-3 py-2">Type</th>
-            </tr>
-          </thead>
-          <tbody>
-            {winners.map((r) => (
-              <tr key={r.id} className="border-t border-mustard/10 hover:bg-felt-light/20">
-                <td className="px-3 py-2 font-mono text-chalk/70">{r.seasons?.label}</td>
-                <td className="px-3 py-2 font-mono">{r.week}</td>
-                <td className="px-3 py-2 font-medium">{r.members?.name}</td>
-                <td className="px-3 py-2 font-mono">{r.team_abbr}</td>
-                <td className="px-3 py-2 font-mono text-chalk/60">{r.opponent_abbr}</td>
-                <td className="px-3 py-2 font-mono font-bold text-mustard">{r.score}</td>
-                <td className="px-3 py-2 font-mono">{r.amount_won ? money(r.amount_won) : '—'}</td>
-                <td className="px-3 py-2">
-                  <span
-                    className={`text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded ${
-                      r.result_type === 'hit33'
-                        ? 'bg-green-700/60 text-chalk'
-                        : 'bg-mustard/30 text-mustard'
-                    }`}
-                  >
-                    {r.result_type === 'hit33' ? '33' : 'Wk18'}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {winners.length === 0 && (
-          <div className="p-6 text-center text-chalk/50">No winners recorded yet.</div>
-        )}
-      </div>
+## 4. Point lissleagues.com at it (Cloudflare)
 
-      {winners.length > 0 && (
-        <div className="text-sm text-chalk/60">
-          {winners.length} winning result{winners.length === 1 ? '' : 's'} ·{' '}
-          <span className="font-mono text-mustard">{money(totalPaid)}</span> paid out
-        </div>
-      )}
-    </div>
-  )
-}
+Since Cloudflare DNS is already set up:
+1. In Netlify, go to **Domain settings → Add a domain**, enter `lissleagues.com`.
+2. Netlify will show you the target (usually a `apex-loadbalancer.netlify.com` or a Netlify subdomain to CNAME to).
+3. In Cloudflare's DNS tab for lissleagues.com, point the root/`www` records at that target as Netlify instructs
+   (Netlify's domain screen tells you exactly which record type and value to use).
+4. Set Cloudflare's SSL/TLS mode to **Full** (not Flexible) so Netlify's own certificate is used correctly.
+
+## 5. First-time data entry (in the live app)
+
+Open the site → NFL33 → **Setup** tab, in this order:
+1. **Members** — paste all 32 names, one per line.
+2. **Seasons** — add each season (e.g. `2023-24`, start year `2023`). Mark the season currently being
+   played as "current" and set its current week — that's what drives the Matchup Tracker and Live Tracker.
+3. **Weekly Assignments** — pick the current (or a past) season, paste your week/member/team rows.
+   Use ESPN's standard team abbreviations (KC, SF, DAL, BUF, etc.) so live scores match up correctly.
+4. **Historical Results** — for past seasons only, paste in the full result rows. Columns are now:
+   `week, member_name, team_abbr, opponent_abbr, score, team_won_game, home_away, amount_won, result_type`
+   - `team_won_game` — did the NFL team win that game? `w`/`l` (or blank if you don't have it)
+   - `home_away` — `h` or `a`
+   - `result_type` — blank for a normal week, `hit33` for a real 33-hit, `week18_payout` for the tie-break payout
+
+   The two middle columns are what power the win/loss and home/away splits in the Record Book. Blank is
+   fine — those hits just won't be counted in the splits until you fill them in.
+
+Everything else (Matchup Tracker, Live Season Tracker, Record Book, Season Awards, All-Time) reads from
+what you enter here — no other manual aggregate entry needed.
+
+## Site structure
+
+- `lissleagues.com` — pool picker (NFL33 live; NFL25 and Golf shown as Coming Soon)
+- `lissleagues.com/NFL33` — Matchups (live tracker)
+- `/NFL33/live` — Live Season Tracker
+- `/NFL33/teams` — Team Grid (members × weeks, green = hit 33)
+- `/NFL33/winners` — Winners (all seasons, paid results only)
+- `/NFL33/awards` — Season Awards (all seasons, computed automatically — no entry needed)
+- `/NFL33/record-book` — Record Book (all-time derived stats)
+- `/NFL33/setup` — data entry
+
+## What's built vs. what's next
+
+- ✅ NFL 33 Point Pool: Matchups, Live Season Tracker, Team Grid, Winners, Season Awards, Record Book, Setup.
+- ✅ Installable PWA (Add to Home Screen on iOS/Android; works offline for anything already loaded).
+- ⏳ NFL25 and Golf pool — placeholder tiles on the landing page. The schema and routing are
+  structured so each can be added as its own set of tables and its own `/POOLNAME` route without touching NFL33.
+
+## Notes on the ESPN data
+
+- Uses `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard` — free, no key, unofficial
+  (ESPN could change or rate-limit it without notice; if scores stop loading, that's the first thing to check).
+- The Live Season Tracker only counts a member's week once that week's game is **final** — in-progress
+  games aren't counted yet, so the running total won't include a currently-live game until it ends.
+
+## Local development (optional)
+
+If you ever want to preview changes on your own machine before pushing to GitHub:
+```
+npm install
+npm run dev
+```
+You'll need a `.env` file (copy `.env.example`) with your Supabase URL/key for this to work locally.
+
+## Season Awards payouts
+
+These are fixed in code, not entered:
+
+- Most Consistent (lowest cumulative |33 − score|): **$160**
+- Least Consistent (highest): **$140**
+
+Averages divide the season total by 17, since each team has one bye week. Both payouts
+feed into Total Paid Out and Most Money Won on the Record Book page. A season marked
+`is_current` shows its standings but no payout until it closes.
+
+To change the amounts, edit `AWARD_PAYOUT` at the top of `src/lib/awards.js`.

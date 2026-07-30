@@ -10,11 +10,26 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Modern display type: tight tracking, no serif flourish */
+/* Athletic block wordmark — jersey/scoreboard lettering */
+.wordmark {
+  font-family: 'Anton', Impact, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 400;
+  line-height: 1;
+}
+
+/* Big wordmark on the landing page gets a subtle chiselled edge */
+.wordmark-hero {
+  text-shadow: 0 3px 0 rgba(0,0,0,0.35), 0 0 34px rgba(212,160,23,0.22);
+}
+
+/* Section headings: same athletic family, smaller */
 .display {
-  font-family: 'Space Grotesk', system-ui, sans-serif;
-  letter-spacing: -0.02em;
-  font-weight: 600;
+  font-family: 'Anton', Impact, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-weight: 400;
 }
 
 .felt-panel {

@@ -14,7 +14,7 @@ export default function Nav() {
   return (
     <nav className="felt-panel sticky top-0 z-20 px-4 py-3">
       <div className="max-w-6xl mx-auto flex flex-wrap items-center gap-x-6 gap-y-2">
-        <Link to="/" className="display text-xl text-mustard tracking-tight shrink-0">
+        <Link to="/" className="wordmark text-2xl text-mustard shrink-0">
           Liss Leagues
         </Link>
         <span className="text-chalk/30 hidden sm:inline">/</span>

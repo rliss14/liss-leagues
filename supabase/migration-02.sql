@@ -17,3 +17,11 @@ alter table weekly_results
 create index if not exists idx_results_result_type on weekly_results (result_type);
 create index if not exists idx_results_team on weekly_results (team_abbr);
 create index if not exists idx_results_opponent on weekly_results (opponent_abbr);
+
+-- ---------------------------------------------------------------
+-- Note (added later): season_awards is no longer used by the app.
+-- Season Awards are now computed on the fly from weekly_results,
+-- with fixed payouts ($160 most consistent / $140 least consistent).
+-- The table is left in place harmlessly. If you want it gone:
+--   drop table if exists season_awards;
+-- ---------------------------------------------------------------

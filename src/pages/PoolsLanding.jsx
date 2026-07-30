@@ -28,7 +28,7 @@ export default function PoolsLanding() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-12 space-y-10">
       <header className="text-center space-y-2">
-        <h1 className="display text-5xl sm:text-6xl text-mustard">Liss Leagues</h1>
+        <h1 className="wordmark wordmark-hero text-6xl sm:text-8xl text-mustard">Liss Leagues</h1>
         <p className="text-chalk/60">Pick your pool.</p>
       </header>
 
@@ -49,7 +49,7 @@ export default function PoolsLanding() {
               >
                 {pool.badge}
               </div>
-              <div className="display text-lg">{pool.name}</div>
+              <div className="wordmark text-xl tracking-wide">{pool.name}</div>
               <p className="text-xs text-chalk/60 leading-relaxed">{pool.blurb}</p>
               <span
                 className={`mt-auto text-[11px] uppercase tracking-widest font-semibold ${

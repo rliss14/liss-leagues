@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { getAllResults, getAllSeasonAwards, getAllAssignments } from '../lib/supabaseQueries'
+import { getAllResults, getSeasons } from '../lib/supabaseQueries'
+import { computeSeasonAwards, awardMoneyByMember, AWARD_PAYOUT } from '../lib/awards'
+import { money } from '../lib/format'
 
 function StatCard({ title, children, note }) {
   return (
@@ -11,7 +13,7 @@ function StatCard({ title, children, note }) {
   )
 }
 
-function Leaders({ rows, unit = '', limit = 5, empty = 'No data yet.' }) {
+function Leaders({ rows, unit = '', limit = 5, empty = 'No data yet.', formatter }) {
   if (!rows.length) return <div className="text-chalk/50 text-sm">{empty}</div>
   return (
     <ol className="space-y-1 text-sm">
@@ -21,7 +23,7 @@ function Leaders({ rows, unit = '', limit = 5, empty = 'No data yet.' }) {
             {i + 1}. {r.label}
           </span>
           <span className={`font-mono ${i === 0 ? 'text-mustard font-bold' : 'text-chalk/70'}`}>
-            {unit}{r.value}{r.suffix || ''}
+            {formatter ? formatter(r.value) : `${unit}${r.value}`}{r.suffix || ''}
           </span>
         </li>
       ))}
@@ -36,15 +38,17 @@ const rank = (obj, mapLabel = (k) => k) =>
 
 export default function RecordBook() {
   const [results, setResults] = useState([])
-  const [awards, setAwards] = useState([])
-  const [assignments, setAssignments] = useState([])
+  const [seasons, setSeasons] = useState([])
   const [err, setErr] = useState(null)
 
   useEffect(() => {
     getAllResults().then(setResults).catch((e) => setErr(e.message))
-    getAllSeasonAwards().then(setAwards).catch((e) => setErr(e.message))
-    getAllAssignments().then(setAssignments).catch((e) => setErr(e.message))
+    getSeasons().then(setSeasons).catch((e) => setErr(e.message))
   }, [])
+
+  // Season awards are derived, not stored.
+  const awards = useMemo(() => computeSeasonAwards(results, seasons), [results, seasons])
+  const awardMoney = useMemo(() => awardMoneyByMember(awards), [awards])
 
   const hits = useMemo(() => results.filter((r) => r.result_type === 'hit33'), [results])
 
@@ -56,13 +60,11 @@ export default function RecordBook() {
       if (!name) return
       totals[name] = (totals[name] || 0) + Number(r.amount_won || 0)
     })
-    awards.forEach((a) => {
-      const name = a.members?.name
-      if (!name) return
-      totals[name] = (totals[name] || 0) + Number(a.payout || 0)
+    Object.entries(awardMoney).forEach(([name, amt]) => {
+      totals[name] = (totals[name] || 0) + amt
     })
     return rank(totals)
-  }, [results, awards])
+  }, [results, awardMoney])
 
   const moneyOneSeason = useMemo(() => {
     const totals = {}
@@ -73,12 +75,18 @@ export default function RecordBook() {
       const k = key(name, r.seasons?.label)
       totals[k] = (totals[k] || 0) + Number(r.amount_won || 0)
     })
-    awards.forEach((a) => {
-      const name = a.members?.name
-      if (!name) return
-      const k = key(name, a.seasons?.label)
-      totals[k] = (totals[k] || 0) + Number(a.payout || 0)
-    })
+    awards
+      .filter((a) => !a.inProgress)
+      .forEach((a) => {
+        if (a.best) {
+          const k = key(a.best.name, a.label)
+          totals[k] = (totals[k] || 0) + AWARD_PAYOUT.best
+        }
+        if (a.worst) {
+          const k = key(a.worst.name, a.label)
+          totals[k] = (totals[k] || 0) + AWARD_PAYOUT.worst
+        }
+      })
     return rank(totals, (k) => {
       const [n, s] = k.split('|||')
       return `${n} (${s})`
@@ -154,13 +162,17 @@ export default function RecordBook() {
 
   // ---- Season consistency extremes ----
   const bestSeason = useMemo(() => {
-    const b = awards.filter((a) => a.award_type === 'best_consistency')
-    return b.length ? b.reduce((m, a) => (Number(a.value) < Number(m.value) ? a : m)) : null
+    const done = awards.filter((a) => a.best)
+    return done.length
+      ? done.reduce((m, a) => (a.best.total < m.best.total ? a : m))
+      : null
   }, [awards])
 
   const worstSeason = useMemo(() => {
-    const w = awards.filter((a) => a.award_type === 'worst_consistency')
-    return w.length ? w.reduce((m, a) => (Number(a.value) > Number(m.value) ? a : m)) : null
+    const done = awards.filter((a) => a.worst)
+    return done.length
+      ? done.reduce((m, a) => (a.worst.total > m.worst.total ? a : m))
+      : null
   }, [awards])
 
   // ---- Extras ----
@@ -266,9 +278,15 @@ export default function RecordBook() {
       .sort((a, b) => a.name.localeCompare(b.name))
   }, [results, assignments])
 
+  // Distinct season+week combinations, not row count.
+  const weeksRecorded = useMemo(
+    () => new Set(results.map((r) => `${r.season_id}|${r.week}`)).size,
+    [results]
+  )
+
   const totalPaid =
     results.reduce((s, r) => s + Number(r.amount_won || 0), 0) +
-    awards.reduce((s, a) => s + Number(a.payout || 0), 0)
+    Object.values(awardMoney).reduce((s, v) => s + v, 0)
 
   return (
     <div className="space-y-6">
@@ -288,21 +306,24 @@ export default function RecordBook() {
         </div>
         <div className="stat-card p-4">
           <div className="text-xs uppercase tracking-wider text-chalk/50">Total Paid Out</div>
-          <div className="font-mono text-3xl text-mustard font-bold">${totalPaid.toLocaleString()}</div>
+          <div className="font-mono text-3xl text-mustard font-bold">{money(totalPaid)}</div>
         </div>
         <div className="stat-card p-4">
           <div className="text-xs uppercase tracking-wider text-chalk/50">Weeks Recorded</div>
-          <div className="font-mono text-3xl text-mustard font-bold">{results.length}</div>
+          <div className="font-mono text-3xl text-mustard font-bold">{weeksRecorded}</div>
+          <div className="text-[10px] text-chalk/40 pt-0.5">
+            {results.length.toLocaleString()} member-weeks
+          </div>
         </div>
       </div>
 
       <div className="grid sm:grid-cols-2 gap-4">
         <StatCard title="Most Career 33-Hits"><Leaders rows={hitsByMember} /></StatCard>
         <StatCard title="Most Money Won (Career)" note="Includes week-18 payouts and season awards.">
-          <Leaders rows={moneyByMember} unit="$" />
+          <Leaders rows={moneyByMember} formatter={money} />
         </StatCard>
-        <StatCard title="Most Money Won — One Season"><Leaders rows={moneyOneSeason} unit="$" /></StatCard>
-        <StatCard title="Most Money Won — One Week"><Leaders rows={moneyOneWeek} unit="$" /></StatCard>
+        <StatCard title="Most Money Won — One Season"><Leaders rows={moneyOneSeason} formatter={money} /></StatCard>
+        <StatCard title="Most Money Won — One Week"><Leaders rows={moneyOneWeek} formatter={money} /></StatCard>
         <StatCard title="Most 33-Hits — One Season"><Leaders rows={hitsOneSeason} /></StatCard>
         <StatCard title="Most Common Week for 33s"><Leaders rows={hitsByWeek} /></StatCard>
         <StatCard title="Team That Has Hit 33 Most"><Leaders rows={hitsByTeam} /></StatCard>
@@ -340,23 +361,21 @@ export default function RecordBook() {
         <StatCard title="Best Season Ever" note="Lowest cumulative |33 − score|.">
           {bestSeason ? (
             <div className="text-sm">
-              <span className="font-semibold">{bestSeason.members?.name}</span> —{' '}
-              {bestSeason.seasons?.label} ·{' '}
-              <span className="font-mono text-mustard">Σ|Δ| {bestSeason.value}</span>
+              <span className="font-semibold">{bestSeason.best.name}</span> — {bestSeason.label} ·{' '}
+              <span className="font-mono text-mustard">Σ|Δ| {bestSeason.best.total}</span>
             </div>
           ) : (
-            <div className="text-chalk/50 text-sm">No season awards saved yet.</div>
+            <div className="text-chalk/50 text-sm">No season results yet.</div>
           )}
         </StatCard>
         <StatCard title="Worst Season Ever" note="Highest cumulative |33 − score|.">
           {worstSeason ? (
             <div className="text-sm">
-              <span className="font-semibold">{worstSeason.members?.name}</span> —{' '}
-              {worstSeason.seasons?.label} ·{' '}
-              <span className="font-mono text-brick-light">Σ|Δ| {worstSeason.value}</span>
+              <span className="font-semibold">{worstSeason.worst.name}</span> — {worstSeason.label} ·{' '}
+              <span className="font-mono text-brick-light">Σ|Δ| {worstSeason.worst.total}</span>
             </div>
           ) : (
-            <div className="text-chalk/50 text-sm">No season awards saved yet.</div>
+            <div className="text-chalk/50 text-sm">No season results yet.</div>
           )}
         </StatCard>
       </div>
@@ -379,29 +398,6 @@ export default function RecordBook() {
         </div>
       </div>
 
-      <div>
-        <div className="display text-lg text-chalk/80 mb-3">Most-Assigned Team</div>
-        <div className="felt-panel rounded-xl p-4">
-          {favoriteTeams.length === 0 ? (
-            <div className="text-chalk/50 text-sm">No assignments or results loaded yet.</div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-1.5 text-sm">
-              {favoriteTeams.map((f) => (
-                <div key={f.name} className="flex justify-between gap-2 border-b border-mustard/10 py-1">
-                  <span className="truncate text-chalk/80">{f.name}</span>
-                  <span className="font-mono shrink-0">
-                    <span className="text-mustard font-semibold">{f.team}</span>
-                    <span className="text-chalk/45"> ×{f.count}</span>
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-          <div className="text-[11px] text-chalk/40 pt-3">
-            The team each member has been handed most often, across every season on record.
-          </div>
-        </div>
-      </div>
     </div>
   )
 }

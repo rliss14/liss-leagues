@@ -1,43 +1,35 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import { VitePWA } from 'vite-plugin-pwa'
-
-export default defineConfig({
-  plugins: [
-    react(),
-    VitePWA({
-      registerType: 'autoUpdate',
-      includeAssets: ['icons/icon-192.png', 'icons/icon-512.png'],
-      manifest: {
-        name: 'Liss Leagues',
-        short_name: 'Liss Leagues',
-        description: 'Clubhouse scoreboard for the Liss Leagues betting pools',
-        theme_color: '#1b3d2f',
-        background_color: '#1b3d2f',
-        display: 'standalone',
-        start_url: '/',
-        icons: [
-          { src: 'icons/icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png' },
-          { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
-        ]
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: ['./index.html', './src/**/*.{js,jsx}'],
+  theme: {
+    extend: {
+      colors: {
+        felt: {
+          DEFAULT: '#1b3d2f',
+          dark: '#122a21',
+          light: '#25503e'
+        },
+        mustard: {
+          DEFAULT: '#d4a017',
+          light: '#e6c15a'
+        },
+        brick: {
+          DEFAULT: '#a5372a',
+          light: '#c14a3a'
+        },
+        chalk: '#f2ede2',
+        busted: '#5a6b62'
       },
-      workbox: {
-        // Don't cache ESPN/Supabase API calls aggressively — always try network first
-        // so scores stay live; fall back to cache offline.
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/site\.api\.espn\.com\//,
-            handler: 'NetworkFirst',
-            options: { cacheName: 'espn-api', networkTimeoutSeconds: 5 }
-          },
-          {
-            urlPattern: /supabase\.co\/.*$/,
-            handler: 'NetworkFirst',
-            options: { cacheName: 'supabase-api', networkTimeoutSeconds: 5 }
-          }
-        ]
+      fontFamily: {
+        wordmark: ['Anton', 'Impact', 'sans-serif'],
+        display: ['"Space Grotesk"', 'system-ui', 'sans-serif'],
+        body: ['"Inter"', 'system-ui', 'sans-serif'],
+        mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace']
+      },
+      boxShadow: {
+        felt: 'inset 0 0 60px rgba(0,0,0,0.35)'
       }
-    })
-  ]
-})
+    }
+  },
+  plugins: []
+}

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { getAllResults } from '../lib/supabaseQueries'
+import { money } from '../lib/format'
 
 // Winners = paid results only. A row counts if it carries a result_type
 // (a real 33-hit or the week-18 guaranteed payout) or an amount won.
@@ -39,7 +40,7 @@ export default function Winners() {
         <div className="flex gap-2 text-xs">
           {[
             ['all', 'All'],
-            ['hit33', '33-Hits'],
+            ['hit33', '33s'],
             ['week18', 'Wk18 Payouts']
           ].map(([key, label]) => (
             <button
@@ -82,7 +83,7 @@ export default function Winners() {
                 <td className="px-3 py-2 font-mono">{r.team_abbr}</td>
                 <td className="px-3 py-2 font-mono text-chalk/60">{r.opponent_abbr}</td>
                 <td className="px-3 py-2 font-mono font-bold text-mustard">{r.score}</td>
-                <td className="px-3 py-2 font-mono">{r.amount_won ? `$${r.amount_won}` : '—'}</td>
+                <td className="px-3 py-2 font-mono">{r.amount_won ? money(r.amount_won) : '—'}</td>
                 <td className="px-3 py-2">
                   <span
                     className={`text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded ${
@@ -91,7 +92,7 @@ export default function Winners() {
                         : 'bg-mustard/30 text-mustard'
                     }`}
                   >
-                    {r.result_type === 'hit33' ? '33-Hit' : 'Wk18'}
+                    {r.result_type === 'hit33' ? '33' : 'Wk18'}
                   </span>
                 </td>
               </tr>
@@ -106,7 +107,7 @@ export default function Winners() {
       {winners.length > 0 && (
         <div className="text-sm text-chalk/60">
           {winners.length} winning result{winners.length === 1 ? '' : 's'} ·{' '}
-          <span className="font-mono text-mustard">${totalPaid.toLocaleString()}</span> paid out
+          <span className="font-mono text-mustard">{money(totalPaid)}</span> paid out
         </div>
       )}
     </div>
