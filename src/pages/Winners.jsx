@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { getAllResults } from '../lib/supabaseQueries'
 import { money } from '../lib/format'
+import { normalizeTeam } from '../lib/teams'
 
 // Winners = paid results only. A row counts if it carries a result_type
 // (a real 33-hit or the week-18 guaranteed payout) or an amount won.
@@ -8,27 +9,77 @@ function isWinner(r) {
   return !!r.result_type || Number(r.amount_won || 0) > 0
 }
 
+// Column definitions drive both the header row and the sort comparators,
+// so the two can't drift apart.
+const COLUMNS = [
+  { key: 'season', label: 'Season', get: (r) => r.seasons?.start_year ?? 0, numeric: true },
+  { key: 'week', label: 'Wk', get: (r) => r.week ?? 0, numeric: true },
+  { key: 'member', label: 'Member', get: (r) => (r.members?.name || '').toLowerCase() },
+  { key: 'team', label: 'Team', get: (r) => normalizeTeam(r.team_abbr) || '' },
+  { key: 'opponent', label: 'Opp', get: (r) => normalizeTeam(r.opponent_abbr) || '' },
+  { key: 'score', label: 'Score', get: (r) => r.score ?? 0, numeric: true },
+  { key: 'amount', label: 'Amount', get: (r) => Number(r.amount_won || 0), numeric: true },
+  { key: 'type', label: 'Type', get: (r) => r.result_type || '' }
+]
+
 export default function Winners() {
   const [rows, setRows] = useState([])
   const [err, setErr] = useState(null)
-  const [filter, setFilter] = useState('all')
+  const [typeFilter, setTypeFilter] = useState('all')
+  const [memberFilter, setMemberFilter] = useState('all')
+  // Default view: newest season first, then earliest week.
+  const [sort, setSort] = useState({ key: 'season', dir: 'desc' })
 
   useEffect(() => {
     getAllResults().then(setRows).catch((e) => setErr(e.message))
   }, [])
 
+  const allWinners = useMemo(() => rows.filter(isWinner), [rows])
+
+  // Member list comes from winners only — no point offering someone who's never won.
+  const memberOptions = useMemo(
+    () =>
+      [...new Set(allWinners.map((r) => r.members?.name).filter(Boolean))].sort((a, b) =>
+        a.localeCompare(b)
+      ),
+    [allWinners]
+  )
+
   const winners = useMemo(() => {
-    const list = rows.filter(isWinner)
-    list.sort((a, b) => {
-      const yearDiff = (b.seasons?.start_year || 0) - (a.seasons?.start_year || 0)
-      return yearDiff !== 0 ? yearDiff : a.week - b.week
+    let list = allWinners
+    if (typeFilter === 'hit33') list = list.filter((r) => r.result_type === 'hit33')
+    if (typeFilter === 'week18') list = list.filter((r) => r.result_type === 'week18_payout')
+    if (memberFilter !== 'all') list = list.filter((r) => r.members?.name === memberFilter)
+
+    const col = COLUMNS.find((c) => c.key === sort.key) || COLUMNS[0]
+    const factor = sort.dir === 'asc' ? 1 : -1
+
+    return [...list].sort((a, b) => {
+      const av = col.get(a)
+      const bv = col.get(b)
+      let cmp = col.numeric ? av - bv : String(av).localeCompare(String(bv))
+      // Stable secondary ordering so equal values don't shuffle around.
+      if (cmp === 0) {
+        cmp =
+          (b.seasons?.start_year || 0) - (a.seasons?.start_year || 0) ||
+          (a.week || 0) - (b.week || 0)
+        return cmp
+      }
+      return cmp * factor
     })
-    if (filter === 'hit33') return list.filter((r) => r.result_type === 'hit33')
-    if (filter === 'week18') return list.filter((r) => r.result_type === 'week18_payout')
-    return list
-  }, [rows, filter])
+  }, [allWinners, typeFilter, memberFilter, sort])
+
+  function toggleSort(key) {
+    setSort((prev) =>
+      prev.key === key
+        ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' }
+        : // Numbers are most useful largest-first; text A-Z.
+          { key, dir: COLUMNS.find((c) => c.key === key)?.numeric ? 'desc' : 'asc' }
+    )
+  }
 
   const totalPaid = winners.reduce((sum, r) => sum + Number(r.amount_won || 0), 0)
+  const filtered = typeFilter !== 'all' || memberFilter !== 'all'
 
   return (
     <div className="space-y-4">
@@ -37,7 +88,8 @@ export default function Winners() {
           <h1 className="display text-3xl text-mustard">Winners</h1>
           <p className="text-sm text-chalk/60">Every paid result, all seasons.</p>
         </div>
-        <div className="flex gap-2 text-xs">
+
+        <div className="flex items-center gap-2 flex-wrap text-xs">
           {[
             ['all', 'All'],
             ['hit33', '33s'],
@@ -45,16 +97,31 @@ export default function Winners() {
           ].map(([key, label]) => (
             <button
               key={key}
-              onClick={() => setFilter(key)}
-              className={`px-3 py-1.5 rounded-full border ${
-                filter === key
+              onClick={() => setTypeFilter(key)}
+              className={`px-3 py-1.5 rounded-full border transition-colors ${
+                typeFilter === key
                   ? 'bg-mustard text-felt-dark border-mustard font-semibold'
-                  : 'border-mustard/30 text-chalk/70'
+                  : 'border-mustard/30 text-chalk/70 hover:border-mustard/60'
               }`}
             >
               {label}
             </button>
           ))}
+
+          <select
+            value={memberFilter}
+            onChange={(e) => setMemberFilter(e.target.value)}
+            className={`bg-felt-dark border rounded-full px-3 py-1.5 ${
+              memberFilter === 'all'
+                ? 'border-mustard/30 text-chalk/70'
+                : 'border-mustard text-mustard font-semibold'
+            }`}
+          >
+            <option value="all">All members</option>
+            {memberOptions.map((m) => (
+              <option key={m} value={m}>{m}</option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -64,14 +131,25 @@ export default function Winners() {
         <table className="w-full text-sm">
           <thead>
             <tr className="text-mustard text-left text-xs uppercase tracking-wider">
-              <th className="px-3 py-2">Season</th>
-              <th className="px-3 py-2">Wk</th>
-              <th className="px-3 py-2">Member</th>
-              <th className="px-3 py-2">Team</th>
-              <th className="px-3 py-2">Opp</th>
-              <th className="px-3 py-2">Score</th>
-              <th className="px-3 py-2">Amount</th>
-              <th className="px-3 py-2">Type</th>
+              {COLUMNS.map((c) => {
+                const active = sort.key === c.key
+                return (
+                  <th key={c.key} className="px-3 py-2">
+                    <button
+                      onClick={() => toggleSort(c.key)}
+                      className={`flex items-center gap-1 uppercase tracking-wider hover:text-mustard-light ${
+                        active ? 'text-mustard' : 'text-mustard/60'
+                      }`}
+                      title={`Sort by ${c.label}`}
+                    >
+                      {c.label}
+                      <span className={active ? 'opacity-100' : 'opacity-0'}>
+                        {sort.dir === 'asc' ? '▲' : '▼'}
+                      </span>
+                    </button>
+                  </th>
+                )
+              })}
             </tr>
           </thead>
           <tbody>
@@ -80,8 +158,8 @@ export default function Winners() {
                 <td className="px-3 py-2 font-mono text-chalk/70">{r.seasons?.label}</td>
                 <td className="px-3 py-2 font-mono">{r.week}</td>
                 <td className="px-3 py-2 font-medium">{r.members?.name}</td>
-                <td className="px-3 py-2 font-mono">{r.team_abbr}</td>
-                <td className="px-3 py-2 font-mono text-chalk/60">{r.opponent_abbr}</td>
+                <td className="px-3 py-2 font-mono">{normalizeTeam(r.team_abbr)}</td>
+                <td className="px-3 py-2 font-mono text-chalk/60">{normalizeTeam(r.opponent_abbr)}</td>
                 <td className="px-3 py-2 font-mono font-bold text-mustard">{r.score}</td>
                 <td className="px-3 py-2 font-mono">{r.amount_won ? money(r.amount_won) : '—'}</td>
                 <td className="px-3 py-2">
@@ -100,14 +178,30 @@ export default function Winners() {
           </tbody>
         </table>
         {winners.length === 0 && (
-          <div className="p-6 text-center text-chalk/50">No winners recorded yet.</div>
+          <div className="p-6 text-center text-chalk/50">
+            {allWinners.length === 0 ? 'No winners recorded yet.' : 'No winners match these filters.'}
+          </div>
         )}
       </div>
 
       {winners.length > 0 && (
-        <div className="text-sm text-chalk/60">
-          {winners.length} winning result{winners.length === 1 ? '' : 's'} ·{' '}
-          <span className="font-mono text-mustard">{money(totalPaid)}</span> paid out
+        <div className="flex items-center justify-between flex-wrap gap-2 text-sm text-chalk/60">
+          <span>
+            {winners.length} winning result{winners.length === 1 ? '' : 's'}
+            {filtered && <span className="text-chalk/40"> of {allWinners.length}</span>} ·{' '}
+            <span className="font-mono text-mustard">{money(totalPaid)}</span> paid out
+          </span>
+          {filtered && (
+            <button
+              onClick={() => {
+                setTypeFilter('all')
+                setMemberFilter('all')
+              }}
+              className="text-xs text-mustard hover:text-mustard-light underline"
+            >
+              Clear filters
+            </button>
+          )}
         </div>
       )}
     </div>
