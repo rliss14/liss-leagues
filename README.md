@@ -57,7 +57,10 @@ Open the site → NFL33 → **Setup** tab, in this order:
 2. **Seasons** — add each season (e.g. `2023-24`, start year `2023`). Mark the season currently being
    played as "current" and set its current week — that's what drives the Matchup Tracker and Live Tracker.
 3. **Weekly Assignments** — pick the current (or a past) season, paste your week/member/team rows.
-   Use ESPN's standard team abbreviations (KC, SF, DAL, BUF, etc.) so live scores match up correctly.
+   Team codes (ESPN's form): ARI ATL BAL BUF CAR CHI CIN CLE DAL DEN DET GB HOU IND JAX KC LAC LAR
+   LV MIA MIN NE NO NYG NYJ PHI PIT SEA SF TB TEN **WSH**.
+   Note Washington is WSH, not WAS. Common variants (WAS, OAK, SD, JAC, LA, STL) are converted
+   automatically, and anything unrecognized is rejected before saving rather than saved silently.
 4. **Historical Results** — for past seasons only, paste in the full result rows. Columns are now:
    `week, member_name, team_abbr, opponent_abbr, score, team_won_game, home_away, amount_won, result_type`
    - `team_won_game` — did the NFL team win that game? `w`/`l` (or blank if you don't have it)

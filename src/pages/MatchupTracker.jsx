@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { fetchWeekScoreboard, seasonMismatch } from '../lib/espn'
 import { getCurrentSeason, getAssignments } from '../lib/supabaseQueries'
 import { findClosestTeams } from '../lib/scoring'
+import { normalizeTeam } from '../lib/teams'
 import TeamCard from '../components/TeamCard'
 
 export default function MatchupTracker() {
@@ -37,7 +38,7 @@ export default function MatchupTracker() {
   const ownerFor = useMemo(() => {
     const map = {}
     assignments.forEach((a) => {
-      map[a.team_abbr] = a.members?.name
+      map[normalizeTeam(a.team_abbr)] = a.members?.name
     })
     return map
   }, [assignments])

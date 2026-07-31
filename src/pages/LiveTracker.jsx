@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { fetchWeekScoreboard } from '../lib/espn'
 import { getCurrentSeason, getAssignments } from '../lib/supabaseQueries'
 import { absDiffFromTarget } from '../lib/scoring'
+import { normalizeTeam } from '../lib/teams'
 
 // Builds a lookup of final scores per team abbreviation for one week's scoreboard.
 function finalScoresByTeam(games) {
@@ -52,7 +53,7 @@ export default function LiveTracker() {
         assignments
           .filter((a) => a.week === w)
           .forEach((a) => {
-            const score = finals[a.team_abbr]
+            const score = finals[normalizeTeam(a.team_abbr)]
             if (score == null) return // game not final yet — not counted
             const diff = absDiffFromTarget(score)
             const name = a.members?.name || a.member_id

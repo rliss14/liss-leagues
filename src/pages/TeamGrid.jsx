@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { getSeasons, getAssignments, getResults } from '../lib/supabaseQueries'
 import { fetchWeekScoreboard } from '../lib/espn'
+import { normalizeTeam } from '../lib/teams'
 
 const WEEKS = Array.from({ length: 18 }, (_, i) => i + 1)
 
@@ -41,7 +42,7 @@ export default function TeamGrid() {
       const scoreMap = {}
       // Saved results are authoritative for any week already entered.
       results.forEach((r) => {
-        if (r.score != null) scoreMap[`${r.week}|${r.team_abbr}`] = r.score
+        if (r.score != null) scoreMap[`${r.week}|${normalizeTeam(r.team_abbr)}`] = r.score
       })
 
       // Pull the full schedule for every week of this season. A team missing
@@ -84,7 +85,7 @@ export default function TeamGrid() {
     assignments.forEach((a) => {
       const name = a.members?.name || a.member_id
       if (!byMember[name]) byMember[name] = {}
-      byMember[name][a.week] = a.team_abbr
+      byMember[name][a.week] = normalizeTeam(a.team_abbr)
     })
     return { members: Object.keys(byMember).sort(), cell: byMember }
   }, [assignments])

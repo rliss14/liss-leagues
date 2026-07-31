@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import PasteTable from '../components/PasteTable'
+import { normalizeTeam, isValidTeam } from '../lib/teams'
 import {
   getMembers,
   getSeasons,
@@ -142,6 +143,13 @@ function AssignmentsTab({ members, seasons, onSaved, setErr }) {
   async function save() {
     try {
       const nameToId = Object.fromEntries(members.map((m) => [m.name.toLowerCase(), m.id]))
+      const badTeams = [...new Set(rows.map((r) => r.team_abbr).filter((t) => t && !isValidTeam(t)))]
+      if (badTeams.length) {
+        throw new Error(
+          `Unrecognized team abbreviation(s): ${badTeams.join(', ')}. Nothing was saved. ` +
+          `ESPN uses WSH for Washington, LV for Las Vegas, JAX for Jacksonville.`
+        )
+      }
       const payload = rows.map((r) => {
         const memberId = nameToId[r.member_name?.toLowerCase()]
         if (!memberId) throw new Error(`Unknown member: "${r.member_name}" — add them in the Members tab first.`)
@@ -149,7 +157,7 @@ function AssignmentsTab({ members, seasons, onSaved, setErr }) {
           season_id: seasonId,
           week: Number(r.week),
           member_id: memberId,
-          team_abbr: r.team_abbr.toUpperCase()
+          team_abbr: normalizeTeam(r.team_abbr)
         }
       })
       await upsertAssignments(payload)
@@ -164,6 +172,12 @@ function AssignmentsTab({ members, seasons, onSaved, setErr }) {
       <p className="text-chalk/70 text-sm">
         Paste one row per member per week: <code>week, member_name, team_abbr</code>. For a
         full season that's 18 × 32 = 576 rows — paste them all at once.
+        <br />
+        <span className="text-chalk/50">
+          Team codes: ARI ATL BAL BUF CAR CHI CIN CLE DAL DEN DET GB HOU IND JAX KC LAC LAR LV MIA
+          MIN NE NO NYG NYJ PHI PIT SEA SF TB TEN WSH. Common variants (WAS, OAK, SD, JAC, LA) are
+          converted automatically.
+        </span>
       </p>
       <select className="bg-felt-dark border border-mustard/40 rounded px-3 py-1.5 text-sm" value={seasonId} onChange={(e) => setSeasonId(e.target.value)}>
         {seasons.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
@@ -183,6 +197,14 @@ function ResultsTab({ members, seasons, onSaved, setErr }) {
   async function save() {
     try {
       const nameToId = Object.fromEntries(members.map((m) => [m.name.toLowerCase(), m.id]))
+      const codes = rows.flatMap((r) => [r.team_abbr, r.opponent_abbr])
+      const badTeams = [...new Set(codes.filter((t) => t && !isValidTeam(t)))]
+      if (badTeams.length) {
+        throw new Error(
+          `Unrecognized team abbreviation(s): ${badTeams.join(', ')}. Nothing was saved. ` +
+          `ESPN uses WSH for Washington, LV for Las Vegas, JAX for Jacksonville.`
+        )
+      }
       const payload = rows.map((r) => {
         const memberId = nameToId[r.member_name?.toLowerCase()]
         if (!memberId) throw new Error(`Unknown member: "${r.member_name}" — add them in the Members tab first.`)
@@ -190,7 +212,7 @@ function ResultsTab({ members, seasons, onSaved, setErr }) {
           season_id: seasonId,
           week: Number(r.week),
           member_id: memberId,
-          team_abbr: r.team_abbr.toUpperCase(),
+          team_abbr: normalizeTeam(r.team_abbr),
           opponent_abbr: r.opponent_abbr.toUpperCase(),
           score: Number(r.score),
           team_won_game: r.team_won_game === '' ? null : /^(true|1|y|yes|w|win)$/i.test(r.team_won_game),

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { getAllResults, getSeasons } from '../lib/supabaseQueries'
 import { computeSeasonAwards, awardMoneyByMember, AWARD_PAYOUT } from '../lib/awards'
 import { money } from '../lib/format'
+import { normalizeTeam } from '../lib/teams'
 
 function StatCard({ title, children, note }) {
   return (
@@ -130,7 +131,7 @@ export default function RecordBook() {
   const hitsByTeam = useMemo(() => {
     const c = {}
     hits.forEach((r) => {
-      if (r.team_abbr) c[r.team_abbr] = (c[r.team_abbr] || 0) + 1
+      if (r.team_abbr) { const t = normalizeTeam(r.team_abbr); c[t] = (c[t] || 0) + 1 }
     })
     return rank(c)
   }, [hits])
@@ -138,7 +139,7 @@ export default function RecordBook() {
   const hitsAllowedByTeam = useMemo(() => {
     const c = {}
     hits.forEach((r) => {
-      if (r.opponent_abbr) c[r.opponent_abbr] = (c[r.opponent_abbr] || 0) + 1
+      if (r.opponent_abbr) { const t = normalizeTeam(r.opponent_abbr); c[t] = (c[t] || 0) + 1 }
     })
     return rank(c)
   }, [hits])
