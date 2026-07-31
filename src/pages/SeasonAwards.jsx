@@ -81,7 +81,6 @@ export default function SeasonAwards() {
         <h1 className="display text-3xl text-mustard">Season Awards</h1>
         <p className="text-sm text-chalk/60">
           Cumulative distance from 33 across a full season. Averages divide by {GAMES_PER_SEASON} games.
-          Computed automatically — nothing to enter.
         </p>
       </div>
 

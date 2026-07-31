@@ -38,6 +38,7 @@ edit any code — just follow these steps once. It takes about 20-30 minutes.
 4. Before deploying, click **Add environment variables** and add:
    - `VITE_SUPABASE_URL` = the Project URL from step 1.5
    - `VITE_SUPABASE_ANON_KEY` = the anon public key from step 1.5
+   - `VITE_SETUP_PASSCODE` = any passcode you like, for the Setup screen
 5. Click **Deploy site**. Netlify will build it (a few minutes) and give you a `*.netlify.app` URL.
 
 ## 4. Point lissleagues.com at it (Cloudflare)
@@ -78,7 +79,7 @@ what you enter here — no other manual aggregate entry needed.
 - `/NFL33/winners` — Winners (all seasons, paid results only)
 - `/NFL33/awards` — Season Awards (all seasons, computed automatically — no entry needed)
 - `/NFL33/record-book` — Record Book (all-time derived stats)
-- `/NFL33/setup` — data entry
+- `/NFL33/setup` — data entry (**not linked in the nav** — type the URL directly; passcode required)
 
 ## What's built vs. what's next
 
@@ -91,6 +92,9 @@ what you enter here — no other manual aggregate entry needed.
 
 - Uses `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard` — free, no key, unofficial
   (ESPN could change or rate-limit it without notice; if scores stop loading, that's the first thing to check).
+- The season year MUST be passed as `dates=YYYY`, not `year=YYYY`. The endpoint ignores `year` and
+  silently returns the PREVIOUS season's games. If the Matchups tab ever shows the wrong season, a
+  red banner will say so — check the season's start year in Setup first, then this parameter.
 - The Live Season Tracker only counts a member's week once that week's game is **final** — in-progress
   games aren't counted yet, so the running total won't include a currently-live game until it ends.
 
@@ -115,3 +119,17 @@ feed into Total Paid Out and Most Money Won on the Record Book page. A season ma
 `is_current` shows its standings but no payout until it closes.
 
 To change the amounts, edit `AWARD_PAYOUT` at the top of `src/lib/awards.js`.
+
+## The Setup passcode
+
+Setup has no nav link — reach it by typing `lissleagues.com/NFL33/setup`. It then asks for the
+passcode set in the `VITE_SETUP_PASSCODE` environment variable in Netlify. It stays unlocked until
+you close the browser tab.
+
+To change it: update the variable in Netlify, then **Trigger deploy → Clear cache and deploy site**
+(env vars are baked in at build time).
+
+**What this does and doesn't do.** It keeps friends from stumbling into the data-entry screen and
+overwriting a season. It is not real security: the Supabase anon key is present in the site's
+JavaScript, so someone determined could write to the database directly, bypassing the app. Supabase
+Auth plus row-level security is the real fix when you want it.

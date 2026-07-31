@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { fetchWeekScoreboard } from '../lib/espn'
+import { fetchWeekScoreboard, seasonMismatch } from '../lib/espn'
 import { getCurrentSeason, getAssignments } from '../lib/supabaseQueries'
 import { findClosestTeams } from '../lib/scoring'
 import TeamCard from '../components/TeamCard'
@@ -42,6 +42,8 @@ export default function MatchupTracker() {
     return map
   }, [assignments])
 
+  const mismatch = useMemo(() => seasonMismatch(games), [games])
+
   // Week 18 only: whoever finished closest to 33 still gets paid.
   const closestTeams = useMemo(
     () => (week === 18 ? findClosestTeams(games) : new Set()),
@@ -73,6 +75,14 @@ export default function MatchupTracker() {
           ))}
         </select>
       </div>
+
+      {mismatch && (
+        <div className="rounded-lg border border-brick/60 bg-brick/20 p-3 text-sm">
+          <span className="font-semibold text-brick-light">Season mismatch: </span>
+          asked ESPN for {mismatch.requested} but it returned {mismatch.returned}. Check that this
+          season's start year is set correctly in Setup.
+        </div>
+      )}
 
       {week === 18 && closestTeams.size > 0 && (
         <div className="stat-card p-3 text-sm text-mustard">

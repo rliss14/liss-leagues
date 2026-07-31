@@ -6,16 +6,42 @@ const BASE = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/scorebo
 
 /**
  * Fetch one NFL week's scoreboard (regular season by default).
+ *
+ * IMPORTANT: the season year goes in `dates`, NOT `year`. The scoreboard
+ * endpoint ignores `year` entirely and silently falls back to a default,
+ * which returns the PREVIOUS season's games for whatever week you asked for.
+ *
  * @param {number} week 1-18
  * @param {number} year e.g. 2026
  * @param {number} seasontype 1=pre, 2=regular, 3=post
+ * @returns {Promise<Array>} games, with .requestedYear / .returnedYear on each
  */
 export async function fetchWeekScoreboard(week, year, seasontype = 2) {
-  const url = `${BASE}?week=${week}&year=${year}&seasontype=${seasontype}`
+  const url = `${BASE}?dates=${year}&seasontype=${seasontype}&week=${week}`
   const res = await fetch(url)
   if (!res.ok) throw new Error(`ESPN scoreboard request failed: ${res.status}`)
   const data = await res.json()
-  return (data.events || []).map(parseEvent)
+
+  // ESPN echoes back which season it actually served. Surface any mismatch
+  // rather than quietly rendering the wrong year's matchups.
+  const returnedYear = data.season?.year ?? null
+
+  return (data.events || []).map((event) => ({
+    ...parseEvent(event),
+    requestedYear: Number(year),
+    returnedYear
+  }))
+}
+
+/**
+ * True when ESPN served a different season than the one requested.
+ */
+export function seasonMismatch(games) {
+  const g = games.find((x) => x.returnedYear != null)
+  if (!g) return null
+  return g.returnedYear !== g.requestedYear
+    ? { requested: g.requestedYear, returned: g.returnedYear }
+    : null
 }
 
 function parseEvent(event) {

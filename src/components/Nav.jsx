@@ -6,8 +6,8 @@ const POOL_LINKS = [
   { to: '/NFL33/teams', label: 'Team Grid' },
   { to: '/NFL33/winners', label: 'Winners' },
   { to: '/NFL33/awards', label: 'Season Awards' },
-  { to: '/NFL33/record-book', label: 'Record Book' },
-  { to: '/NFL33/setup', label: 'Setup' }
+  { to: '/NFL33/record-book', label: 'Record Book' }
+  // Setup is deliberately unlinked — reach it directly at /NFL33/setup
 ]
 
 export default function Nav() {
