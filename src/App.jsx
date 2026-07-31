@@ -7,6 +7,7 @@ import TeamGrid from './pages/TeamGrid'
 import Winners from './pages/Winners'
 import SeasonAwards from './pages/SeasonAwards'
 import RecordBook from './pages/RecordBook'
+import Rules from './pages/Rules'
 import DataEntry from './pages/DataEntry'
 import PasscodeGate from './components/PasscodeGate'
 
@@ -37,6 +38,7 @@ export default function App() {
         <Route path="/NFL33/winners" element={<PoolLayout><Winners /></PoolLayout>} />
         <Route path="/NFL33/awards" element={<PoolLayout><SeasonAwards /></PoolLayout>} />
         <Route path="/NFL33/record-book" element={<PoolLayout><RecordBook /></PoolLayout>} />
+        <Route path="/NFL33/rules" element={<PoolLayout><Rules /></PoolLayout>} />
         <Route
           path="/NFL33/setup"
           element={

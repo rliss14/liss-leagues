@@ -82,6 +82,7 @@ what you enter here — no other manual aggregate entry needed.
 - `/NFL33/winners` — Winners (all seasons, paid results only)
 - `/NFL33/awards` — Season Awards (all seasons, computed automatically — no entry needed)
 - `/NFL33/record-book` — Record Book (all-time derived stats)
+- `/NFL33/rules` — Rules
 - `/NFL33/setup` — data entry (**not linked in the nav** — type the URL directly; passcode required)
 
 ## What's built vs. what's next
