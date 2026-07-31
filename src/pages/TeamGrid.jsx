@@ -9,6 +9,7 @@ export default function TeamGrid() {
   const [seasonId, setSeasonId] = useState('')
   const [assignments, setAssignments] = useState([])
   const [scores, setScores] = useState({}) // "week|TEAM" -> final score
+  const [schedule, setSchedule] = useState({}) // week -> Set of team abbrs with a game
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState(null)
 
@@ -37,35 +38,42 @@ export default function TeamGrid() {
       ])
       setAssignments(assigns)
 
-      const map = {}
-      // Saved results are the source of truth for past weeks.
+      const scoreMap = {}
+      // Saved results are authoritative for any week already entered.
       results.forEach((r) => {
-        if (r.score != null) map[`${r.week}|${r.team_abbr}`] = r.score
+        if (r.score != null) scoreMap[`${r.week}|${r.team_abbr}`] = r.score
       })
 
-      // For the season in progress, fill any gaps straight from ESPN.
-      if (season.is_current) {
-        const upTo = season.current_week || 1
-        const boards = await Promise.all(
-          WEEKS.filter((w) => w <= upTo).map((w) =>
-            fetchWeekScoreboard(w, season.start_year)
-              .then((games) => ({ w, games }))
-              .catch(() => ({ w, games: [] }))
-          )
+      // Pull the full schedule for every week of this season. A team missing
+      // from a week's games was on bye — that's how byes are detected, so this
+      // runs for past seasons too, not just the one in progress.
+      const boards = await Promise.all(
+        WEEKS.map((w) =>
+          fetchWeekScoreboard(w, season.start_year)
+            .then((games) => ({ w, games }))
+            .catch(() => ({ w, games: null })) // null = week failed to load
         )
-        boards.forEach(({ w, games }) => {
-          games.forEach((g) => {
-            if (g.status !== 'post') return
-            ;[g.home, g.away].forEach((t) => {
-              if (t && t.score != null) {
-                const k = `${w}|${t.abbreviation}`
-                if (map[k] == null) map[k] = t.score
-              }
-            })
+      )
+
+      const scheduleMap = {}
+      boards.forEach(({ w, games }) => {
+        if (!games || games.length === 0) return // unknown, don't guess byes
+        const playing = new Set()
+        games.forEach((g) => {
+          ;[g.home, g.away].forEach((t) => {
+            if (!t) return
+            playing.add(t.abbreviation)
+            if (g.status === 'post' && t.score != null) {
+              const k = `${w}|${t.abbreviation}`
+              if (scoreMap[k] == null) scoreMap[k] = t.score
+            }
           })
         })
-      }
-      setScores(map)
+        scheduleMap[w] = playing
+      })
+
+      setScores(scoreMap)
+      setSchedule(scheduleMap)
     }
 
     load().catch((e) => setErr(e.message)).finally(() => setLoading(false))
@@ -78,11 +86,31 @@ export default function TeamGrid() {
       if (!byMember[name]) byMember[name] = {}
       byMember[name][a.week] = a.team_abbr
     })
-    return {
-      members: Object.keys(byMember).sort(),
-      cell: byMember
-    }
+    return { members: Object.keys(byMember).sort(), cell: byMember }
   }, [assignments])
+
+  // A team is on bye if that week's schedule loaded and doesn't include it.
+  function isBye(team, week) {
+    const playing = schedule[week]
+    if (!playing || !team) return false
+    return !playing.has(team)
+  }
+
+  // Each team gets exactly one bye per season. Anything flagged more than
+  // once is almost certainly a team abbreviation that doesn't match ESPN.
+  const suspectAbbrs = useMemo(() => {
+    if (!Object.keys(schedule).length) return []
+    const counts = {}
+    members.forEach((name) => {
+      WEEKS.forEach((w) => {
+        const team = cell[name][w]
+        if (team && isBye(team, w)) counts[team] = (counts[team] || 0) + 1
+      })
+    })
+    return Object.entries(counts)
+      .filter(([, n]) => n > 1)
+      .map(([team, n]) => ({ team, n }))
+  }, [members, cell, schedule])
 
   return (
     <div className="space-y-4">
@@ -105,7 +133,15 @@ export default function TeamGrid() {
       </div>
 
       {err && <div className="text-brick-light">{err}</div>}
-      {loading && <div className="text-chalk/60 text-sm">Loading grid…</div>}
+      {loading && <div className="text-chalk/60 text-sm">Loading grid and schedule…</div>}
+
+      {suspectAbbrs.length > 0 && (
+        <div className="rounded-lg border border-brick/60 bg-brick/20 p-3 text-sm">
+          <span className="font-semibold text-brick-light">Check these abbreviations: </span>
+          {suspectAbbrs.map((s) => `${s.team} (${s.n} byes)`).join(', ')}. Every team gets exactly one
+          bye, so more than one means the abbreviation doesn't match ESPN's.
+        </div>
+      )}
 
       <div className="felt-panel rounded-xl overflow-x-auto">
         <table className="text-xs border-collapse">
@@ -129,19 +165,26 @@ export default function TeamGrid() {
                 </td>
                 {WEEKS.map((w) => {
                   const team = cell[name][w]
-                  const score = team != null ? scores[`${w}|${team}`] : null
+                  const bye = isBye(team, w)
+                  const score = team != null && !bye ? scores[`${w}|${team}`] : null
                   const isHit = score === 33
+
+                  let cls = 'text-chalk/75' // scheduled, not yet played
+                  if (bye) cls = 'text-brick-light font-semibold'
+                  else if (isHit) cls = 'bg-green-600 text-white font-bold rounded'
+                  else if (score != null) cls = 'text-chalk/45'
+
                   return (
                     <td
                       key={w}
-                      title={team && score != null ? `${team} scored ${score}` : team || ''}
-                      className={`px-2 py-1.5 text-center font-mono ${
-                        isHit
-                          ? 'bg-green-600 text-white font-bold rounded'
-                          : score != null
-                          ? 'text-chalk/45'
-                          : 'text-chalk/75'
-                      }`}
+                      title={
+                        bye
+                          ? `${team} — bye week`
+                          : team && score != null
+                          ? `${team} scored ${score}`
+                          : team || ''
+                      }
+                      className={`px-2 py-1.5 text-center font-mono ${cls}`}
                     >
                       {team || '—'}
                     </td>
@@ -158,8 +201,11 @@ export default function TeamGrid() {
         )}
       </div>
 
-      <div className="flex gap-4 text-[11px] text-chalk/50">
-        <span><span className="inline-block w-3 h-3 bg-green-600 rounded-sm align-middle mr-1" /> Hit 33</span>
+      <div className="flex flex-wrap gap-4 text-[11px] text-chalk/50">
+        <span>
+          <span className="inline-block w-3 h-3 bg-green-600 rounded-sm align-middle mr-1" /> Hit 33
+        </span>
+        <span className="text-brick-light">Red = bye week</span>
         <span className="text-chalk/45">Dimmed = game final, no hit</span>
         <span className="text-chalk/75">Bright = not yet played</span>
       </div>
