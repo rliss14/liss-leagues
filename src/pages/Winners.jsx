@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { getAllResults } from '../lib/supabaseQueries'
-import { money } from '../lib/format'
+import { money, isTargetHit } from '../lib/format'
 import { normalizeTeam } from '../lib/teams'
+import { usePool } from '../components/PoolLayout'
 
 // Winners = paid results only. A row counts if it carries a result_type
-// (a real 33-hit or the week-18 guaranteed payout) or an amount won.
+// (a target hit or the week-18 guaranteed payout) or an amount won.
 function isWinner(r) {
   return !!r.result_type || Number(r.amount_won || 0) > 0
 }
@@ -23,6 +24,7 @@ const COLUMNS = [
 ]
 
 export default function Winners() {
+  const pool = usePool()
   const [rows, setRows] = useState([])
   const [err, setErr] = useState(null)
   const [typeFilter, setTypeFilter] = useState('all')
@@ -31,8 +33,8 @@ export default function Winners() {
   const [sort, setSort] = useState({ key: 'season', dir: 'desc' })
 
   useEffect(() => {
-    getAllResults().then(setRows).catch((e) => setErr(e.message))
-  }, [])
+    getAllResults(pool.id).then(setRows).catch((e) => setErr(e.message))
+  }, [pool.id])
 
   const allWinners = useMemo(() => rows.filter(isWinner), [rows])
 
@@ -47,7 +49,7 @@ export default function Winners() {
 
   const winners = useMemo(() => {
     let list = allWinners
-    if (typeFilter === 'hit33') list = list.filter((r) => r.result_type === 'hit33')
+    if (typeFilter === 'hit33') list = list.filter(isTargetHit)
     if (typeFilter === 'week18') list = list.filter((r) => r.result_type === 'week18_payout')
     if (memberFilter !== 'all') list = list.filter((r) => r.members?.name === memberFilter)
 
@@ -92,7 +94,7 @@ export default function Winners() {
         <div className="flex items-center gap-2 flex-wrap text-xs">
           {[
             ['all', 'All'],
-            ['hit33', '33s'],
+            ['hit33', `${pool.target}s`],
             ['week18', 'Wk18 Payouts']
           ].map(([key, label]) => (
             <button
@@ -165,12 +167,12 @@ export default function Winners() {
                 <td className="px-3 py-2">
                   <span
                     className={`text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded ${
-                      r.result_type === 'hit33'
+                      isTargetHit(r)
                         ? 'bg-green-700/60 text-chalk'
                         : 'bg-mustard/30 text-mustard'
                     }`}
                   >
-                    {r.result_type === 'hit33' ? '33' : 'Wk18'}
+                    {isTargetHit(r) ? pool.target : 'Wk18'}
                   </span>
                 </td>
               </tr>

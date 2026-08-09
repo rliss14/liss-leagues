@@ -1,53 +1,50 @@
-// Core "33 Point Pool" status logic, shared by the Matchup Tracker,
-// Live Season Tracker and Team Grid so the rules live in one place.
-
-export const TARGET = 33
+// Core point-pool status logic, shared by every pool. The target score is
+// passed in rather than hardcoded, so the same rules drive 33 and 25.
 
 // Reachable from one possession: safety (2), FG (3), TD no PAT (6),
-// TD+PAT (7), TD+2pt (8). We flag the whole 1-8 band below target.
+// TD+PAT (7), TD+2pt (8). The whole 1-8 band below target is flagged.
 const ONE_POSSESSION_MIN = 1
 const ONE_POSSESSION_MAX = 8
 
 /**
  * @param {number|null} score
  * @param {'pre'|'in'|'post'} gameStatus
- * @param {boolean} isClosest  week-18 tie-break winner (only used when final)
- * @returns {{ key: string, label: string }}
+ * @param {number} target the pool's winning score
+ * @param {boolean} isClosest week-18 tie-break winner (pools that guarantee one)
  */
-export function teamStatus(score, gameStatus, isClosest = false) {
+export function teamStatus(score, gameStatus, target, isClosest = false) {
   if (score == null || gameStatus === 'pre') {
     return { key: 'scheduled', label: 'Scheduled' }
   }
 
   // ---- FINAL ----
   if (gameStatus === 'post') {
-    if (score === TARGET) return { key: 'hit', label: 'HIT 33 💰' }
+    if (score === target) return { key: 'hit', label: `HIT ${target} 💰` }
     if (isClosest) return { key: 'closest', label: 'CLOSEST' }
-    if (score > TARGET) return { key: 'busted', label: 'BUSTED' }
+    if (score > target) return { key: 'busted', label: 'BUSTED' }
     return { key: 'low', label: 'LOW' }
   }
 
   // ---- LIVE ----
-  const diff = TARGET - score
-  if (score === TARGET) return { key: 'gold', label: 'Currently 33' }
-  if (score > TARGET) return { key: 'busted', label: 'BUSTED' }
+  const diff = target - score
+  if (score === target) return { key: 'gold', label: `Currently ${target}` }
+  if (score > target) return { key: 'busted', label: 'BUSTED' }
   if (diff >= ONE_POSSESSION_MIN && diff <= ONE_POSSESSION_MAX) {
     return { key: 'oneposs', label: `One Possession Away (${diff})` }
   }
   return { key: 'live', label: 'In Range' }
 }
 
-export function absDiffFromTarget(score) {
+export function absDiffFromTarget(score, target) {
   if (score == null) return null
-  return Math.abs(TARGET - score)
+  return Math.abs(target - score)
 }
 
 /**
- * Week 18 only: find the team abbreviation(s) closest to 33 across all
- * finalized games. Returns an empty Set if anyone actually hit 33, since
- * the guaranteed payout only applies when nobody lands on the number.
+ * Week 18 only, and only for pools that guarantee a winner: the team(s)
+ * closest to target across all finalized games. Empty if anyone hit it exactly.
  */
-export function findClosestTeams(games) {
+export function findClosestTeams(games, target) {
   const finals = []
   games.forEach((g) => {
     if (g.status !== 'post') return
@@ -56,8 +53,10 @@ export function findClosestTeams(games) {
     })
   })
   if (!finals.length) return new Set()
-  if (finals.some((t) => t.score === TARGET)) return new Set()
+  if (finals.some((t) => t.score === target)) return new Set()
 
-  const best = Math.min(...finals.map((t) => absDiffFromTarget(t.score)))
-  return new Set(finals.filter((t) => absDiffFromTarget(t.score) === best).map((t) => t.abbr))
+  const best = Math.min(...finals.map((t) => absDiffFromTarget(t.score, target)))
+  return new Set(
+    finals.filter((t) => absDiffFromTarget(t.score, target) === best).map((t) => t.abbr)
+  )
 }

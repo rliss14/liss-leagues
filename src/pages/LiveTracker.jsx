@@ -3,6 +3,7 @@ import { fetchWeekScoreboard } from '../lib/espn'
 import { getCurrentSeason, getAssignments } from '../lib/supabaseQueries'
 import { absDiffFromTarget } from '../lib/scoring'
 import { normalizeTeam } from '../lib/teams'
+import { usePool } from '../components/PoolLayout'
 
 // Builds a lookup of final scores per team abbreviation for one week's scoreboard.
 function finalScoresByTeam(games) {
@@ -16,6 +17,7 @@ function finalScoresByTeam(games) {
 }
 
 export default function LiveTracker() {
+  const pool = usePool()
   const [season, setSeason] = useState(null)
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
@@ -23,8 +25,8 @@ export default function LiveTracker() {
   const [weeksCovered, setWeeksCovered] = useState(0)
 
   useEffect(() => {
-    getCurrentSeason().then(setSeason).catch((e) => setErr(e.message))
-  }, [])
+    getCurrentSeason(pool.id).then(setSeason).catch((e) => setErr(e.message))
+  }, [pool.id])
 
   useEffect(() => {
     if (!season) return
@@ -55,7 +57,7 @@ export default function LiveTracker() {
           .forEach((a) => {
             const score = finals[normalizeTeam(a.team_abbr)]
             if (score == null) return // game not final yet — not counted
-            const diff = absDiffFromTarget(score)
+            const diff = absDiffFromTarget(score, pool.target)
             const name = a.members?.name || a.member_id
             if (!totals[name]) totals[name] = { sum: 0, weeks: 0 }
             totals[name].sum += diff
@@ -77,7 +79,7 @@ export default function LiveTracker() {
     }
 
     run().catch((e) => setErr(e.message)).finally(() => setLoading(false))
-  }, [season])
+  }, [season, pool.target])
 
   if (!season) {
     return (
@@ -91,7 +93,7 @@ export default function LiveTracker() {
     <div className="space-y-4">
       <h1 className="display text-3xl text-mustard">Live Season Tracker</h1>
       <p className="text-chalk/70 text-sm">
-        Running total of |33 − score| across finalized weeks so far this season. Lower is better.
+        Running total of |{pool.target} − score| across finalized weeks so far this season. Lower is better.
       </p>
       {err && <div className="text-brick-light">{err}</div>}
       {loading && <div className="text-chalk/70">Crunching every finalized game…</div>}

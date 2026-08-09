@@ -1,27 +1,15 @@
 import { Link } from 'react-router-dom'
+import { POOL_LIST, COMING_SOON } from '../lib/pools'
 
-const POOLS = [
-  {
-    name: 'NFL 33 Point Pool',
-    path: '/NFL33',
-    badge: '33',
-    blurb: 'One team per member, every week. Land on 33 and get paid.',
-    live: true
-  },
-  {
-    name: 'NFL25',
-    path: null,
-    badge: '25',
-    blurb: 'Same format, different number.',
-    live: false
-  },
-  {
-    name: 'Golf Pool',
-    path: null,
-    badge: '⛳',
-    blurb: 'Roster of golfers, best N scores count toward your total.',
-    live: false
-  }
+const TILES = [
+  ...POOL_LIST.map((p) => ({
+    name: p.name,
+    path: p.basePath,
+    badge: p.badge,
+    blurb: p.blurb,
+    live: p.live
+  })),
+  ...COMING_SOON.map((p) => ({ ...p, path: null, live: false }))
 ]
 
 export default function PoolsLanding() {
@@ -32,8 +20,8 @@ export default function PoolsLanding() {
         <p className="text-chalk/60">Pick your pool.</p>
       </header>
 
-      <div className="grid gap-5 sm:grid-cols-3">
-        {POOLS.map((pool) => {
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        {TILES.map((pool) => {
           const card = (
             <div
               className={`felt-panel rounded-2xl p-6 h-full flex flex-col items-center text-center gap-3 transition-transform ${

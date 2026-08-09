@@ -12,7 +12,7 @@ export const GAMES_PER_SEASON = 17
  * @param {Array} seasons  rows from getSeasons()
  * @returns {Array} one entry per season, newest first
  */
-export function computeSeasonAwards(results, seasons) {
+export function computeSeasonAwards(results, seasons, target = 33) {
   const bySeason = {}
 
   results.forEach((r) => {
@@ -22,7 +22,7 @@ export function computeSeasonAwards(results, seasons) {
     if (!bySeason[r.season_id]) bySeason[r.season_id] = {}
     const bucket = bySeason[r.season_id]
     if (!bucket[name]) bucket[name] = { memberId: r.member_id, sum: 0, weeks: 0 }
-    bucket[name].sum += Math.abs(33 - r.score)
+    bucket[name].sum += Math.abs(target - r.score)
     bucket[name].weeks += 1
   })
 

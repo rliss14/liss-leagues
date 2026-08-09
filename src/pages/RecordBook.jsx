@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { getAllResults, getSeasons } from '../lib/supabaseQueries'
 import { computeSeasonAwards, awardMoneyByMember, AWARD_PAYOUT } from '../lib/awards'
-import { money } from '../lib/format'
+import { money, isTargetHit } from '../lib/format'
 import { normalizeTeam } from '../lib/teams'
+import { usePool } from '../components/PoolLayout'
 
 function StatCard({ title, children, note }) {
   return (
@@ -38,20 +39,24 @@ const rank = (obj, mapLabel = (k) => k) =>
     .sort((a, b) => b.value - a.value)
 
 export default function RecordBook() {
+  const pool = usePool()
   const [results, setResults] = useState([])
   const [seasons, setSeasons] = useState([])
   const [err, setErr] = useState(null)
 
   useEffect(() => {
-    getAllResults().then(setResults).catch((e) => setErr(e.message))
-    getSeasons().then(setSeasons).catch((e) => setErr(e.message))
-  }, [])
+    getAllResults(pool.id).then(setResults).catch((e) => setErr(e.message))
+    getSeasons(pool.id).then(setSeasons).catch((e) => setErr(e.message))
+  }, [pool.id])
 
   // Season awards are derived, not stored.
-  const awards = useMemo(() => computeSeasonAwards(results, seasons), [results, seasons])
+  const awards = useMemo(
+    () => (pool.hasSeasonAwards ? computeSeasonAwards(results, seasons, pool.target) : []),
+    [results, seasons, pool]
+  )
   const awardMoney = useMemo(() => awardMoneyByMember(awards), [awards])
 
-  const hits = useMemo(() => results.filter((r) => r.result_type === 'hit33'), [results])
+  const hits = useMemo(() => results.filter(isTargetHit), [results])
 
   // ---- Money: weekly winnings + season award payouts combined ----
   const moneyByMember = useMemo(() => {
@@ -180,13 +185,13 @@ export default function RecordBook() {
   const heartbreaks = useMemo(() => {
     const c = {}
     results.forEach((r) => {
-      if (r.score === 32 || r.score === 34) {
+      if (r.score === pool.target - 1 || r.score === pool.target + 1) {
         const n = r.members?.name
         if (n) c[n] = (c[n] || 0) + 1
       }
     })
     return rank(c)
-  }, [results])
+  }, [results, pool.target])
 
   const multiHitWeeks = useMemo(() => {
     const c = {}
@@ -204,7 +209,7 @@ export default function RecordBook() {
       const n = r.members?.name
       if (!n) return
       if (!t[n]) t[n] = { sum: 0, n: 0 }
-      t[n].sum += Math.abs(33 - r.score)
+      t[n].sum += Math.abs(pool.target - r.score)
       t[n].n += 1
     })
     return Object.entries(t)
@@ -240,7 +245,7 @@ export default function RecordBook() {
     })
   }, [results])
 
-  // ---- Longest drought: most consecutive played weeks without a 33 ----
+  // ---- Longest drought: most consecutive played weeks without a hit ----
   const droughts = useMemo(() => {
     const byMember = {}
     results.forEach((r) => {
@@ -250,7 +255,7 @@ export default function RecordBook() {
       byMember[n].push({
         year: r.seasons?.start_year || 0,
         week: r.week,
-        hit: r.result_type === 'hit33'
+        hit: isTargetHit(r)
       })
     })
 
@@ -298,7 +303,7 @@ export default function RecordBook() {
 
       <div className="grid sm:grid-cols-3 gap-3">
         <div className="stat-card p-4">
-          <div className="text-xs uppercase tracking-wider text-chalk/50">Total 33-Hits</div>
+          <div className="text-xs uppercase tracking-wider text-chalk/50">Total {pool.target}-Hits</div>
           <div className="font-mono text-3xl text-mustard font-bold">{hits.length}</div>
         </div>
         <div className="stat-card p-4">
@@ -315,16 +320,16 @@ export default function RecordBook() {
       </div>
 
       <div className="grid sm:grid-cols-2 gap-4">
-        <StatCard title="Most Career 33-Hits"><Leaders rows={hitsByMember} /></StatCard>
-        <StatCard title="Most Money Won (Career)" note="Includes week-18 payouts and season awards.">
+        <StatCard title={`Most Career ${pool.target}-Hits`}><Leaders rows={hitsByMember} /></StatCard>
+        <StatCard title="Most Money Won (Career)" note={pool.hasSeasonAwards ? "Includes week-18 payouts and season awards." : "Weekly payouts only."}>
           <Leaders rows={moneyByMember} formatter={money} />
         </StatCard>
         <StatCard title="Most Money Won — One Season"><Leaders rows={moneyOneSeason} formatter={money} /></StatCard>
         <StatCard title="Most Money Won — One Week"><Leaders rows={moneyOneWeek} formatter={money} /></StatCard>
-        <StatCard title="Most 33-Hits — One Season"><Leaders rows={hitsOneSeason} /></StatCard>
-        <StatCard title="Most Common Week for 33s"><Leaders rows={hitsByWeek} /></StatCard>
-        <StatCard title="Team That Has Hit 33 Most"><Leaders rows={hitsByTeam} /></StatCard>
-        <StatCard title="Team That Has Given Up 33 Most" note="Opponent on the losing end of a 33.">
+        <StatCard title={`Most ${pool.target}-Hits — One Season`}><Leaders rows={hitsOneSeason} /></StatCard>
+        <StatCard title={`Most Common Week for ${pool.target}s`}><Leaders rows={hitsByWeek} /></StatCard>
+        <StatCard title={`Team That Has Hit ${pool.target} Most`}><Leaders rows={hitsByTeam} /></StatCard>
+        <StatCard title={`Team That Has Given Up ${pool.target} Most`} note={`Opponent on the losing end of a ${pool.target}.`}>
           <Leaders rows={hitsAllowedByTeam} />
         </StatCard>
         <StatCard
@@ -340,7 +345,7 @@ export default function RecordBook() {
 
       <div className="stat-card p-4 space-y-3">
         <div className="text-mustard text-xs font-semibold uppercase tracking-wider">
-          How the 33s Happened
+          How the {pool.target}s Happened
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
           {[
@@ -363,8 +368,9 @@ export default function RecordBook() {
         )}
       </div>
 
+      {pool.hasSeasonAwards && (
       <div className="grid sm:grid-cols-2 gap-4">
-        <StatCard title="Best Season Ever" note="Lowest cumulative |33 − score|.">
+        <StatCard title="Best Season Ever" note={`Lowest cumulative |${pool.target} − score|.`}>
           {bestSeason ? (
             <div className="text-sm">
               <span className="font-semibold">{bestSeason.best.name}</span> — {bestSeason.label} ·{' '}
@@ -374,7 +380,7 @@ export default function RecordBook() {
             <div className="text-chalk/50 text-sm">No season results yet.</div>
           )}
         </StatCard>
-        <StatCard title="Worst Season Ever" note="Highest cumulative |33 − score|.">
+        <StatCard title="Worst Season Ever" note={`Highest cumulative |${pool.target} − score|.`}>
           {worstSeason ? (
             <div className="text-sm">
               <span className="font-semibold">{worstSeason.worst.name}</span> — {worstSeason.label} ·{' '}
@@ -385,20 +391,21 @@ export default function RecordBook() {
           )}
         </StatCard>
       </div>
+      )}
 
       <div>
         <div className="display text-lg text-chalk/80 mb-3">Bonus Records</div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard title="Longest Drought" note="Most weeks in a row without a 33. 'Active' means it's still running.">
+          <StatCard title="Longest Drought" note={`Most weeks in a row without a ${pool.target}. Active means it is still running.`}>
             <Leaders rows={droughts} />
           </StatCard>
-          <StatCard title="Heartbreak Club" note="Finished at 32 or 34 — one score away.">
+          <StatCard title="Heartbreak Club" note={`Finished at ${pool.target - 1} or ${pool.target + 1} — one score away.`}>
             <Leaders rows={heartbreaks} />
           </StatCard>
-          <StatCard title="Multi-Hit Weeks" note="Weeks where more than one member hit 33.">
+          <StatCard title="Multi-Hit Weeks" note={`Weeks where more than one member hit ${pool.target}.`}>
             <Leaders rows={multiHitWeeks} empty="Never happened yet." />
           </StatCard>
-          <StatCard title="Best All-Time Average |Δ|" note="Lowest average distance from 33, all weeks.">
+          <StatCard title="Best All-Time Average |Δ|" note={`Lowest average distance from ${pool.target}, all weeks.`}>
             <Leaders rows={avgDiffByMember} />
           </StatCard>
         </div>

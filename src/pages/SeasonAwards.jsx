@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { getSeasons, getAllResults } from '../lib/supabaseQueries'
 import { computeSeasonAwards, AWARD_PAYOUT, GAMES_PER_SEASON } from '../lib/awards'
 import { money } from '../lib/format'
+import { usePool } from '../components/PoolLayout'
 
 function AwardTable({ title, subtitle, rows, payout, accent }) {
   return (
@@ -51,22 +52,26 @@ function AwardTable({ title, subtitle, rows, payout, accent }) {
 }
 
 export default function SeasonAwards() {
+  const pool = usePool()
   const [seasons, setSeasons] = useState([])
   const [results, setResults] = useState([])
   const [err, setErr] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    Promise.all([getSeasons(), getAllResults()])
+    Promise.all([getSeasons(pool.id), getAllResults(pool.id)])
       .then(([s, r]) => {
         setSeasons(s)
         setResults(r)
       })
       .catch((e) => setErr(e.message))
       .finally(() => setLoading(false))
-  }, [])
+  }, [pool.id])
 
-  const awards = useMemo(() => computeSeasonAwards(results, seasons), [results, seasons])
+  const awards = useMemo(
+    () => computeSeasonAwards(results, seasons, pool.target),
+    [results, seasons, pool.target]
+  )
 
   const bestRows = awards
     .filter((a) => a.best)
@@ -80,7 +85,7 @@ export default function SeasonAwards() {
       <div>
         <h1 className="display text-3xl text-mustard">Season Awards</h1>
         <p className="text-sm text-chalk/60">
-          Cumulative distance from 33 across a full season. Averages divide by {GAMES_PER_SEASON} games.
+          Cumulative distance from {pool.target} across a full season. Averages divide by {GAMES_PER_SEASON} games.
         </p>
       </div>
 
@@ -89,7 +94,7 @@ export default function SeasonAwards() {
 
       <AwardTable
         title="Most Consistent"
-        subtitle={`Lowest cumulative |33 − score| · ${money(AWARD_PAYOUT.best)} per season`}
+        subtitle={`Lowest cumulative |${pool.target} − score| · ${money(AWARD_PAYOUT.best)} per season`}
         rows={bestRows}
         payout={AWARD_PAYOUT.best}
         accent="text-mustard"
@@ -97,7 +102,7 @@ export default function SeasonAwards() {
 
       <AwardTable
         title="Least Consistent"
-        subtitle={`Highest cumulative |33 − score| · ${money(AWARD_PAYOUT.worst)} per season`}
+        subtitle={`Highest cumulative |${pool.target} − score| · ${money(AWARD_PAYOUT.worst)} per season`}
         rows={worstRows}
         payout={AWARD_PAYOUT.worst}
         accent="text-brick-light"

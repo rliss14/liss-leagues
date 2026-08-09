@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../supabaseClient'
 import PasteTable from '../components/PasteTable'
 import { normalizeTeam, isValidTeam } from '../lib/teams'
+import { usePool } from '../components/PoolLayout'
 import {
   getMembers,
   getSeasons,
@@ -12,6 +13,7 @@ import {
 const TABS = ['Members', 'Seasons', 'Weekly Assignments', 'Historical Results']
 
 export default function DataEntry() {
+  const pool = usePool()
   const [tab, setTab] = useState(TABS[0])
   const [members, setMembers] = useState([])
   const [seasons, setSeasons] = useState([])
@@ -19,15 +21,16 @@ export default function DataEntry() {
   const [err, setErr] = useState(null)
 
   function refresh() {
-    getMembers().then(setMembers).catch((e) => setErr(e.message))
-    getSeasons().then(setSeasons).catch((e) => setErr(e.message))
+    getMembers(pool.id).then(setMembers).catch((e) => setErr(e.message))
+    getSeasons(pool.id).then(setSeasons).catch((e) => setErr(e.message))
   }
 
-  useEffect(refresh, [])
+  useEffect(refresh, [pool.id])
 
   return (
     <div className="space-y-6">
       <h1 className="display text-3xl text-mustard">Setup</h1>
+      <p className="text-sm text-chalk/60 -mt-4">{pool.name}</p>
       <div className="flex gap-3 flex-wrap text-sm">
         {TABS.map((t) => (
           <button
@@ -46,29 +49,29 @@ export default function DataEntry() {
       {status && <div className="text-green-400 text-sm">{status}</div>}
 
       {tab === 'Members' && (
-        <MembersTab onSaved={() => { setStatus('Members saved.'); refresh() }} setErr={setErr} existing={members} />
+        <MembersTab pool={pool} onSaved={() => { setStatus('Members saved.'); refresh() }} setErr={setErr} existing={members} />
       )}
       {tab === 'Seasons' && (
-        <SeasonsTab onSaved={() => { setStatus('Season saved.'); refresh() }} setErr={setErr} existing={seasons} />
+        <SeasonsTab pool={pool} onSaved={() => { setStatus('Season saved.'); refresh() }} setErr={setErr} existing={seasons} />
       )}
       {tab === 'Weekly Assignments' && (
-        <AssignmentsTab members={members} seasons={seasons} onSaved={() => setStatus('Assignments saved.')} setErr={setErr} />
+        <AssignmentsTab pool={pool} members={members} seasons={seasons} onSaved={() => setStatus('Assignments saved.')} setErr={setErr} />
       )}
       {tab === 'Historical Results' && (
-        <ResultsTab members={members} seasons={seasons} onSaved={() => setStatus('Results saved.')} setErr={setErr} />
+        <ResultsTab pool={pool} members={members} seasons={seasons} onSaved={() => setStatus('Results saved.')} setErr={setErr} />
       )}
     </div>
   )
 }
 
-function MembersTab({ onSaved, setErr, existing }) {
+function MembersTab({ pool, onSaved, setErr, existing }) {
   const [rows, setRows] = useState([])
   async function save() {
     try {
       const names = rows.map((r) => r.name).filter(Boolean)
       const { error } = await supabase.from('members').upsert(
-        names.map((name) => ({ name })),
-        { onConflict: 'name' }
+        names.map((name) => ({ name, pool: pool.id })),
+        { onConflict: 'pool,name' }
       )
       if (error) throw error
       onSaved()
@@ -88,7 +91,7 @@ function MembersTab({ onSaved, setErr, existing }) {
   )
 }
 
-function SeasonsTab({ onSaved, setErr, existing }) {
+function SeasonsTab({ pool, onSaved, setErr, existing }) {
   const [label, setLabel] = useState('')
   const [startYear, setStartYear] = useState('')
   const [isCurrent, setIsCurrent] = useState(false)
@@ -97,11 +100,22 @@ function SeasonsTab({ onSaved, setErr, existing }) {
   async function save() {
     try {
       if (isCurrent) {
-        await supabase.from('seasons').update({ is_current: false }).eq('is_current', true)
+        // Only clear the current flag within this pool.
+        await supabase
+          .from('seasons')
+          .update({ is_current: false })
+          .eq('is_current', true)
+          .eq('pool', pool.id)
       }
       const { error } = await supabase.from('seasons').upsert(
-        [{ label, start_year: Number(startYear), is_current: isCurrent, current_week: Number(currentWeek) }],
-        { onConflict: 'label' }
+        [{
+          label,
+          start_year: Number(startYear),
+          is_current: isCurrent,
+          current_week: Number(currentWeek),
+          pool: pool.id
+        }],
+        { onConflict: 'pool,label' }
       )
       if (error) throw error
       setLabel(''); setStartYear(''); setIsCurrent(false); setCurrentWeek(1)
@@ -136,7 +150,7 @@ function SeasonsTab({ onSaved, setErr, existing }) {
   )
 }
 
-function AssignmentsTab({ members, seasons, onSaved, setErr }) {
+function AssignmentsTab({ pool, members, seasons, onSaved, setErr }) {
   const [seasonId, setSeasonId] = useState(seasons[0]?.id || '')
   const [rows, setRows] = useState([])
 
@@ -190,7 +204,7 @@ function AssignmentsTab({ members, seasons, onSaved, setErr }) {
   )
 }
 
-function ResultsTab({ members, seasons, onSaved, setErr }) {
+function ResultsTab({ pool, members, seasons, onSaved, setErr }) {
   const [seasonId, setSeasonId] = useState(seasons[0]?.id || '')
   const [rows, setRows] = useState([])
 
@@ -219,7 +233,11 @@ function ResultsTab({ members, seasons, onSaved, setErr }) {
           home_away: /^h/i.test(r.home_away) ? 'home' : /^a/i.test(r.home_away) ? 'away' : null,
           win: !!r.result_type,
           amount_won: r.amount_won ? Number(r.amount_won) : null,
-          result_type: /hit/i.test(r.result_type) ? 'hit33' : /18|payout/i.test(r.result_type) ? 'week18_payout' : null
+          result_type: /18|payout/i.test(r.result_type)
+            ? 'week18_payout'
+            : /hit/i.test(r.result_type)
+            ? `hit${pool.target}`
+            : null
         }
       })
       await upsertResults(payload)
@@ -235,7 +253,8 @@ function ResultsTab({ members, seasons, onSaved, setErr }) {
         Paste historical rows: <code>week, member_name, team_abbr, opponent_abbr, score, team_won_game, home_away, amount_won, result_type</code>.
         <br /><code>team_won_game</code> = did the NFL team win that game (w/l, yes/no, or blank).
         <code>home_away</code> = h or a. Both feed the Record Book splits.
-        Leave <code>result_type</code> blank unless it's a real "hit33" or the "week18_payout" tie-break.
+        Leave <code>result_type</code> blank unless it's a real <code>hit</code> or the{' '}
+        <code>week18_payout</code> tie-break.
       </p>
       <select className="bg-felt-dark border border-mustard/40 rounded px-3 py-1.5 text-sm" value={seasonId} onChange={(e) => setSeasonId(e.target.value)}>
         {seasons.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}

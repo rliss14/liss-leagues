@@ -3,9 +3,11 @@ import { fetchWeekScoreboard, seasonMismatch } from '../lib/espn'
 import { getCurrentSeason, getAssignments } from '../lib/supabaseQueries'
 import { findClosestTeams } from '../lib/scoring'
 import { normalizeTeam } from '../lib/teams'
+import { usePool } from '../components/PoolLayout'
 import TeamCard from '../components/TeamCard'
 
 export default function MatchupTracker() {
+  const pool = usePool()
   const [season, setSeason] = useState(null)
   const [week, setWeek] = useState(1)
   const [games, setGames] = useState([])
@@ -14,13 +16,13 @@ export default function MatchupTracker() {
   const [err, setErr] = useState(null)
 
   useEffect(() => {
-    getCurrentSeason()
+    getCurrentSeason(pool.id)
       .then((s) => {
         setSeason(s)
         if (s) setWeek(s.current_week || 1)
       })
       .catch((e) => setErr(e.message))
-  }, [])
+  }, [pool.id])
 
   useEffect(() => {
     if (!season) return
@@ -47,8 +49,8 @@ export default function MatchupTracker() {
 
   // Week 18 only: whoever finished closest to 33 still gets paid.
   const closestTeams = useMemo(
-    () => (week === 18 ? findClosestTeams(games) : new Set()),
-    [games, week]
+    () => (pool.week18Guarantee && week === 18 ? findClosestTeams(games, pool.target) : new Set()),
+    [games, week, pool]
   )
 
   if (!season) {
@@ -64,7 +66,7 @@ export default function MatchupTracker() {
       <div className="flex items-end justify-between flex-wrap gap-3">
         <div>
           <h1 className="display text-3xl text-mustard">Week {week}</h1>
-          <p className="text-sm text-chalk/60">{season.label} · 33 Point Pool</p>
+          <p className="text-sm text-chalk/60">{season.label} · {pool.name}</p>
         </div>
         <select
           className="bg-felt-dark border border-mustard/40 rounded px-3 py-1.5 text-sm"
@@ -87,7 +89,7 @@ export default function MatchupTracker() {
 
       {week === 18 && closestTeams.size > 0 && (
         <div className="stat-card p-3 text-sm text-mustard">
-          Nobody landed on 33 — closest team{closestTeams.size > 1 ? 's' : ''} flagged below for the
+          Nobody landed on {pool.target} — closest team{closestTeams.size > 1 ? 's' : ''} flagged below for the
           guaranteed payout.
         </div>
       )}
@@ -128,12 +130,14 @@ export default function MatchupTracker() {
                 gameStatus={g.status}
                 ownerName={ownerFor[g.away?.abbreviation]}
                 isClosest={closestTeams.has(g.away?.abbreviation)}
+                target={pool.target}
               />
               <TeamCard
                 team={g.home}
                 gameStatus={g.status}
                 ownerName={ownerFor[g.home?.abbreviation]}
                 isClosest={closestTeams.has(g.home?.abbreviation)}
+                target={pool.target}
               />
             </div>
           </div>

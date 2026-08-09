@@ -2,10 +2,12 @@ import { useEffect, useMemo, useState } from 'react'
 import { getSeasons, getAssignments, getResults } from '../lib/supabaseQueries'
 import { fetchWeekScoreboard } from '../lib/espn'
 import { normalizeTeam } from '../lib/teams'
+import { usePool } from '../components/PoolLayout'
 
 const WEEKS = Array.from({ length: 18 }, (_, i) => i + 1)
 
 export default function TeamGrid() {
+  const pool = usePool()
   const [seasons, setSeasons] = useState([])
   const [seasonId, setSeasonId] = useState('')
   const [assignments, setAssignments] = useState([])
@@ -15,14 +17,14 @@ export default function TeamGrid() {
   const [err, setErr] = useState(null)
 
   useEffect(() => {
-    getSeasons()
+    getSeasons(pool.id)
       .then((s) => {
         setSeasons(s)
         const current = s.find((x) => x.is_current) || s[0]
         if (current) setSeasonId(current.id)
       })
       .catch((e) => setErr(e.message))
-  }, [])
+  }, [pool.id])
 
   useEffect(() => {
     if (!seasonId) return
@@ -119,7 +121,7 @@ export default function TeamGrid() {
         <div>
           <h1 className="display text-3xl text-mustard">Team Grid</h1>
           <p className="text-sm text-chalk/60">
-            Every member's team, week by week. Green means that team hit 33.
+            Every member's team, week by week. Green means that team hit {pool.target}.
           </p>
         </div>
         <select
@@ -168,7 +170,7 @@ export default function TeamGrid() {
                   const team = cell[name][w]
                   const bye = isBye(team, w)
                   const score = team != null && !bye ? scores[`${w}|${team}`] : null
-                  const isHit = score === 33
+                  const isHit = score === pool.target
 
                   let cls = 'text-chalk/75' // scheduled, not yet played
                   if (bye) cls = 'text-brick-light font-semibold'
@@ -204,7 +206,7 @@ export default function TeamGrid() {
 
       <div className="flex flex-wrap gap-4 text-[11px] text-chalk/50">
         <span>
-          <span className="inline-block w-3 h-3 bg-green-600 rounded-sm align-middle mr-1" /> Hit 33
+          <span className="inline-block w-3 h-3 bg-green-600 rounded-sm align-middle mr-1" /> Hit {pool.target}
         </span>
         <span className="text-brick-light">Red = bye week</span>
         <span className="text-chalk/45">Dimmed = game final, no hit</span>

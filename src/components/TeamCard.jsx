@@ -12,9 +12,9 @@ const STATUS_STYLES = {
   low: 'bg-busted/40 text-chalk/45'
 }
 
-export default function TeamCard({ team, gameStatus, ownerName, isClosest }) {
+export default function TeamCard({ team, gameStatus, ownerName, isClosest, target }) {
   if (!team) return null
-  const status = teamStatus(team.score, gameStatus, isClosest)
+  const status = teamStatus(team.score, gameStatus, target, isClosest)
   const style = STATUS_STYLES[status.key]
   const dimmed = status.key === 'busted' || status.key === 'low'
 

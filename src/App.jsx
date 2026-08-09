@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
-import Nav from './components/Nav'
+import { POOLS, POOL_LIST } from './lib/pools'
+import PoolLayout from './components/PoolLayout'
 import PoolsLanding from './pages/PoolsLanding'
 import MatchupTracker from './pages/MatchupTracker'
 import LiveTracker from './pages/LiveTracker'
@@ -8,22 +9,14 @@ import Winners from './pages/Winners'
 import SeasonAwards from './pages/SeasonAwards'
 import RecordBook from './pages/RecordBook'
 import Rules from './pages/Rules'
+import Squares from './pages/Squares'
 import DataEntry from './pages/DataEntry'
 import PasscodeGate from './components/PasscodeGate'
-
-function PoolLayout({ children }) {
-  return (
-    <div className="min-h-screen">
-      <Nav />
-      <main className="max-w-6xl mx-auto px-4 py-6">{children}</main>
-    </div>
-  )
-}
 
 // Netlify serves paths case-sensitively, so /nfl33 would 404 without this.
 function CaseRedirect() {
   const { pathname } = useLocation()
-  const fixed = pathname.replace(/^\/nfl33/i, '/NFL33')
+  const fixed = pathname.replace(/^\/nfl(33|25)/i, (_, n) => `/NFL${n}`)
   return <Navigate to={fixed} replace />
 }
 
@@ -32,24 +25,30 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<PoolsLanding />} />
-        <Route path="/NFL33" element={<PoolLayout><MatchupTracker /></PoolLayout>} />
-        <Route path="/NFL33/live" element={<PoolLayout><LiveTracker /></PoolLayout>} />
-        <Route path="/NFL33/teams" element={<PoolLayout><TeamGrid /></PoolLayout>} />
-        <Route path="/NFL33/winners" element={<PoolLayout><Winners /></PoolLayout>} />
-        <Route path="/NFL33/awards" element={<PoolLayout><SeasonAwards /></PoolLayout>} />
-        <Route path="/NFL33/record-book" element={<PoolLayout><RecordBook /></PoolLayout>} />
-        <Route path="/NFL33/rules" element={<PoolLayout><Rules /></PoolLayout>} />
-        <Route
-          path="/NFL33/setup"
-          element={
-            <PoolLayout>
-              <PasscodeGate>
-                <DataEntry />
-              </PasscodeGate>
-            </PoolLayout>
-          }
-        />
+
+        {POOL_LIST.map((pool) => (
+          <Route key={pool.id} path={pool.basePath} element={<PoolLayout pool={pool} />}>
+            <Route index element={<MatchupTracker />} />
+            {pool.hasLiveTracker && <Route path="live" element={<LiveTracker />} />}
+            <Route path="teams" element={<TeamGrid />} />
+            <Route path="winners" element={<Winners />} />
+            {pool.hasSeasonAwards && <Route path="awards" element={<SeasonAwards />} />}
+            <Route path="record-book" element={<RecordBook />} />
+            {pool.hasSquares && <Route path="squares" element={<Squares />} />}
+            <Route path="rules" element={<Rules />} />
+            <Route
+              path="setup"
+              element={
+                <PasscodeGate>
+                  <DataEntry />
+                </PasscodeGate>
+              }
+            />
+          </Route>
+        ))}
+
         <Route path="/nfl33/*" element={<CaseRedirect />} />
+        <Route path="/nfl25/*" element={<CaseRedirect />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

@@ -75,7 +75,9 @@ what you enter here — no other manual aggregate entry needed.
 
 ## Site structure
 
-- `lissleagues.com` — pool picker (NFL33 live; NFL25 and Golf shown as Coming Soon)
+- `lissleagues.com` — pool picker (NFL33 and NFL25 live; Golf shown as Coming Soon)
+
+### NFL33 — target 33
 - `lissleagues.com/NFL33` — Matchups (live tracker)
 - `/NFL33/live` — Live Season Tracker
 - `/NFL33/teams` — Team Grid (members × weeks, green = hit 33)
@@ -84,6 +86,25 @@ what you enter here — no other manual aggregate entry needed.
 - `/NFL33/record-book` — Record Book (all-time derived stats)
 - `/NFL33/rules` — Rules
 - `/NFL33/setup` — data entry (**not linked in the nav** — type the URL directly; passcode required)
+
+### NFL25 — target 25
+
+Same tabs, minus Season Awards and the Live Season Tracker (no consistency payout in this pool).
+
+- `/NFL25` — Matchups
+- `/NFL25/teams` — Team Grid
+- `/NFL25/rules` — Rules
+- `/NFL25/winners` — **hidden** (no history yet; unlink by editing `hiddenTabs` in `src/lib/pools.js`)
+- `/NFL25/record-book` — **hidden**, same reason
+- `/NFL25/squares` — **hidden**; Super Bowl squares grid, payout rules pending
+- `/NFL25/setup` — data entry, same passcode
+
+**Key NFL25 rule differences:** no season consistency payout (that $10/member goes to Super Bowl
+squares), no website fee, and week 18 has no guaranteed winner — leftover pot rolls to the squares
+board rather than paying out or carrying to next season.
+
+To unhide a tab, remove its slug from `hiddenTabs` in `src/lib/pools.js`. To change a target score,
+payout, or entry fee, edit the same file — every page reads from it.
 
 ## What's built vs. what's next
 

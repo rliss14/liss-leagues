@@ -19,27 +19,33 @@ async function fetchAllPaged(buildQuery) {
   return out
 }
 
-// ---- Members ----
-export async function getMembers() {
-  const { data, error } = await supabase.from('members').select('*').order('name')
+// ---- Members (scoped per pool) ----
+export async function getMembers(pool) {
+  const { data, error } = await supabase
+    .from('members')
+    .select('*')
+    .eq('pool', pool)
+    .order('name')
   if (error) throw error
   return data
 }
 
-// ---- Seasons ----
-export async function getSeasons() {
+// ---- Seasons (scoped per pool) ----
+export async function getSeasons(pool) {
   const { data, error } = await supabase
     .from('seasons')
     .select('*')
+    .eq('pool', pool)
     .order('start_year', { ascending: false })
   if (error) throw error
   return data
 }
 
-export async function getCurrentSeason() {
+export async function getCurrentSeason(pool) {
   const { data, error } = await supabase
     .from('seasons')
     .select('*')
+    .eq('pool', pool)
     .eq('is_current', true)
     .maybeSingle()
   if (error) throw error
@@ -78,13 +84,16 @@ export async function getResults(seasonId) {
   )
 }
 
-export async function getAllResults() {
-  return fetchAllPaged(() =>
+export async function getAllResults(pool) {
+  const rows = await fetchAllPaged(() =>
     supabase
       .from('weekly_results')
-      .select('*, members(name), seasons(label, start_year)')
+      .select('*, members(name), seasons(label, start_year, pool)')
       .order('id')
   )
+  // Filter client-side: PostgREST can't filter on an embedded table without
+  // an inner join, and the row counts here are small enough that it's moot.
+  return pool ? rows.filter((r) => r.seasons?.pool === pool) : rows
 }
 
 export async function upsertResults(rows) {
@@ -97,4 +106,29 @@ export async function upsertResults(rows) {
       .upsert(rows.slice(i, i + CHUNK), { onConflict: 'season_id,week,member_id' })
     if (error) throw error
   }
+}
+
+// ---- Super Bowl squares (structure only; payout rules TBD) ----
+export async function getSquares(seasonId) {
+  const [gridRes, cfgRes] = await Promise.all([
+    supabase.from('squares').select('*').eq('season_id', seasonId).order('position'),
+    supabase.from('squares_config').select('*').eq('season_id', seasonId).maybeSingle()
+  ])
+  if (gridRes.error) throw gridRes.error
+  if (cfgRes.error) throw cfgRes.error
+  return { squares: gridRes.data || [], config: cfgRes.data || null }
+}
+
+export async function upsertSquares(rows) {
+  const { error } = await supabase
+    .from('squares')
+    .upsert(rows, { onConflict: 'season_id,position' })
+  if (error) throw error
+}
+
+export async function upsertSquaresConfig(row) {
+  const { error } = await supabase
+    .from('squares_config')
+    .upsert(row, { onConflict: 'season_id' })
+  if (error) throw error
 }
