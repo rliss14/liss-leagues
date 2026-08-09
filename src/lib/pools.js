@@ -28,7 +28,7 @@ export const POOLS = {
     target: 25,
     basePath: '/NFL25',
     badge: '25',
-    blurb: 'Same format, different number. Leftovers fund Super Bowl squares.',
+    blurb: 'One team per member, every week. Land on 25 and get paid.',
     live: true,
     entry: { total: 100, weekly: 90, perWeek: 5, other: 10, otherLabel: 'Super Bowl squares' },
     hasSeasonAwards: false,
