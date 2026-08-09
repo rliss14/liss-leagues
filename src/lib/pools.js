@@ -17,6 +17,7 @@ export const POOLS = {
     hasSquares: false,
     week18Guarantee: true,
     websiteFee: 20,
+    signature: 'Ryan',
     // Tabs hidden from the nav but still reachable by URL
     hiddenTabs: []
   },
@@ -35,6 +36,20 @@ export const POOLS = {
     hasSquares: true,
     week18Guarantee: false,
     websiteFee: 0,
+    signature: 'John',
+    squaresRules: {
+      reserve: 320,          // $10 per member, set aside at entry
+      squaresPerMember: 3,
+      xSquares: 4,           // 100 - (32 members x 3)
+      quarters: 4,
+      // Points added to BOTH scores when a winning square is an X.
+      xFactor: [
+        { label: '1st quarter', add: 1 },
+        { label: '2nd quarter', add: 2 },
+        { label: '3rd quarter', add: 3 },
+        { label: 'Final score', add: 4 }
+      ]
+    },
     // No history yet, so these stay unlinked until there's data to show.
     hiddenTabs: ['winners', 'record-book', 'squares']
   }

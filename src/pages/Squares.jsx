@@ -2,8 +2,18 @@ import { useEffect, useMemo, useState } from 'react'
 import { getSeasons, getSquares, upsertSquares, upsertSquaresConfig } from '../lib/supabaseQueries'
 import { usePool } from '../components/PoolLayout'
 import PasteTable from '../components/PasteTable'
+import { money } from '../lib/format'
 
 const SIZE = 10
+
+function RuleLine({ children }) {
+  return (
+    <li className="flex gap-3 text-sm leading-relaxed">
+      <span className="text-mustard/50 shrink-0 mt-[3px]">▸</span>
+      <span className="text-chalk/85">{children}</span>
+    </li>
+  )
+}
 
 function parseDigits(str) {
   if (!str) return null
@@ -13,6 +23,7 @@ function parseDigits(str) {
 
 export default function Squares() {
   const pool = usePool()
+  const r = pool.squaresRules
   const [seasons, setSeasons] = useState([])
   const [seasonId, setSeasonId] = useState('')
   const [squares, setSquares] = useState([])
@@ -112,8 +123,73 @@ export default function Squares() {
         </select>
       </div>
 
-      <div className="rounded-lg border border-mustard/40 bg-mustard/10 p-3 text-sm text-chalk/80">
-        Payout rules for this board haven't been set yet. The grid below is structure only.
+      <div className="felt-panel rounded-xl p-5 space-y-5">
+        <div>
+          <h2 className="display text-xl text-mustard">How it works</h2>
+          <ul className="space-y-1.5 pt-2">
+            <RuleLine>
+              100 squares on a 10 × 10 grid. One team's score runs across the top, the other down
+              the side.
+            </RuleLine>
+            <RuleLine>
+              Every member gets {r.squaresPerMember} squares. The remaining {r.xSquares} are marked{' '}
+              <span className="font-mono text-mustard font-semibold">X</span>.
+            </RuleLine>
+            <RuleLine>
+              Once all squares are filled, the digits 0 through 9 are drawn at random for each axis.
+              Nobody knows which numbers they hold until then.
+            </RuleLine>
+            <RuleLine>
+              At the end of each quarter, take the last digit of each team's score. The square where
+              those two digits meet wins that quarter.
+            </RuleLine>
+          </ul>
+        </div>
+
+        <div>
+          <h2 className="display text-xl text-mustard">The pot</h2>
+          <ul className="space-y-1.5 pt-2">
+            <RuleLine>
+              Whatever is left in the week 18 pot if nobody hits {pool.target}, plus the{' '}
+              <span className="font-mono text-mustard font-semibold">{money(r.reserve)}</span>{' '}
+              reserve set aside from entry fees.
+            </RuleLine>
+            <RuleLine>
+              Split evenly across the {r.quarters} quarters — each one pays a quarter of the total.
+            </RuleLine>
+            <RuleLine>
+              If the game goes to overtime, the final score supersedes the 4th quarter score.
+            </RuleLine>
+          </ul>
+        </div>
+
+        <div>
+          <h2 className="display text-xl text-brick-light">The X factor</h2>
+          <p className="text-sm text-chalk/70 pt-1 leading-relaxed">
+            If a winning square turns out to be an{' '}
+            <span className="font-mono text-mustard font-semibold">X</span>, add points to both
+            teams' scores and use whichever square that lands on instead. If that one is also an{' '}
+            <span className="font-mono text-mustard font-semibold">X</span>, apply the same shift
+            again, and keep going until you land on a member's square.
+          </p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-3">
+            {r.xFactor.map((x) => (
+              <div key={x.label} className="stat-card p-3 text-center">
+                <div className="font-mono text-2xl text-mustard font-bold">+{x.add}</div>
+                <div className="text-[10px] uppercase tracking-wider text-chalk/50">{x.label}</div>
+              </div>
+            ))}
+          </div>
+          <p className="text-xs text-chalk/45 pt-3">
+            Example: the 2nd quarter ends 17–10, so the square is 7 and 0. If that's an X, add 2 to
+            both — 19 and 12 — and the square at 9 and 2 wins instead. Still an X? Add 2 again for 1
+            and 4, and so on.
+          </p>
+          <p className="text-xs text-chalk/45 pt-2">
+            This can never run forever. Each shift walks a diagonal of at least five squares, and
+            only four are marked X, so a member's square is always reachable.
+          </p>
+        </div>
       </div>
 
       {err && <div className="text-brick-light">{err}</div>}

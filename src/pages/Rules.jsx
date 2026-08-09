@@ -146,7 +146,7 @@ export default function Rules() {
       </Section>
 
       {/* Season-end money */}
-      {pool.hasSeasonAwards ? (
+      {pool.hasSeasonAwards && (
         <Section title="Season Awards">
           <p className="text-sm text-chalk/70 leading-relaxed">
             Every week, your differential is how far your team's score landed from {target} — above
@@ -190,28 +190,11 @@ export default function Rules() {
             </Rule>
           </ul>
         </Section>
-      ) : (
-        <Section title="End of Season">
-          <ul className="space-y-2">
-            <Rule>
-              No season-long consistency payout in this pool. The {money(entry.other)} per member
-              set aside at entry goes toward Super Bowl squares instead.
-            </Rule>
-            <Rule>
-              Anything still sitting in the weekly pot after week 18 also rolls into the squares
-              board rather than carrying into next season.
-            </Rule>
-            <Rule>No website fee is taken out of this pool.</Rule>
-            <Rule>
-              Squares rules and payouts will be posted before the board is drawn.
-            </Rule>
-          </ul>
-        </Section>
       )}
 
       <div className="pt-4 border-t border-mustard/15 text-sm text-chalk/60">
         Good luck to everyone.
-        <div className="pt-1 text-chalk/40">— Ryan Liss</div>
+        <div className="pt-1 text-chalk/40">— {pool.signature}</div>
       </div>
     </div>
   )
