@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
-import { POOLS, POOL_LIST } from './lib/pools'
+import { POOL_LIST, FANTASY } from './lib/pools'
 import PoolLayout from './components/PoolLayout'
 import PoolsLanding from './pages/PoolsLanding'
 import MatchupTracker from './pages/MatchupTracker'
@@ -10,13 +10,18 @@ import SeasonAwards from './pages/SeasonAwards'
 import RecordBook from './pages/RecordBook'
 import Rules from './pages/Rules'
 import Squares from './pages/Squares'
+import FFHome from './pages/FFHome'
+import FFRecordBook from './pages/FFRecordBook'
+import FFMembers from './pages/FFMembers'
 import DataEntry from './pages/DataEntry'
 import PasscodeGate from './components/PasscodeGate'
 
 // Netlify serves paths case-sensitively, so /nfl33 would 404 without this.
 function CaseRedirect() {
   const { pathname } = useLocation()
-  const fixed = pathname.replace(/^\/nfl(33|25)/i, (_, n) => `/NFL${n}`)
+  const fixed = pathname
+    .replace(/^\/nfl(33|25)/i, (_, n) => `/NFL${n}`)
+    .replace(/^\/ealffl/i, '/EALFFL')
   return <Navigate to={fixed} replace />
 }
 
@@ -47,8 +52,15 @@ export default function App() {
           </Route>
         ))}
 
+        <Route path={FANTASY.basePath} element={<PoolLayout pool={FANTASY} />}>
+          <Route index element={<FFHome />} />
+          <Route path="records" element={<FFRecordBook />} />
+          <Route path="members" element={<FFMembers />} />
+        </Route>
+
         <Route path="/nfl33/*" element={<CaseRedirect />} />
         <Route path="/nfl25/*" element={<CaseRedirect />} />
+        <Route path="/ealffl/*" element={<CaseRedirect />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

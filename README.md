@@ -103,6 +103,25 @@ Same tabs, minus Season Awards and the Live Season Tracker (no consistency payou
 squares), no website fee, and week 18 has no guaranteed winner — leftover pot rolls to the squares
 board rather than paying out or carrying to next season.
 
+### EALFFL — Edward A. Liss Fantasy Football League
+
+A fantasy league archive, not a point pool. Data comes from ESPN exports pasted in once a year.
+
+- `/EALFFL` — champions, trophy case, and season standings (ordered by regular-season record,
+  with 🥇🥈🥉 marking final placement after playoffs)
+- `/EALFFL/records` — league-wide record book
+- `/EALFFL/members` — career résumé per member
+
+Migration 04 creates `ff_standings` and `ff_playoffs` **and seeds the 2022–2025 seasons**, so this
+works as soon as you run it — no data entry needed for those years.
+
+**2022 asterisk:** that season's playoff rounds ran two weeks each (Wk 15–16, 17–18). Scores and
+margins from that postseason aren't comparable to later single-week seasons, so playoff scoring
+records exclude 2022. Season totals include it.
+
+**Not yet available:** regular-season weekly scores. ESPN's standings export only has season
+totals, so "highest one-week score" currently uses playoff games only.
+
 To unhide a tab, remove its slug from `hiddenTabs` in `src/lib/pools.js`. To change a target score,
 payout, or entry fee, edit the same file — every page reads from it.
 

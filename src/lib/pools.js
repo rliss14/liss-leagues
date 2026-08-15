@@ -55,7 +55,26 @@ export const POOLS = {
   }
 }
 
+// The fantasy league isn't a point pool — different data, different tabs.
+export const FANTASY = {
+  id: 'EALFFL',
+  name: 'Edward A. Liss Fantasy Football League',
+  shortName: 'EALFFL',
+  basePath: '/EALFFL',
+  badge: '🏆',
+  blurb: 'Twelve managers. One Edward A. Liss Memorial Trophy.',
+  live: true,
+  isFantasy: true,
+  hiddenTabs: [],
+  tabs: [
+    { slug: '', label: 'League', end: true },
+    { slug: 'records', label: 'Record Book' },
+    { slug: 'members', label: 'Members' }
+  ]
+}
+
 export const POOL_LIST = Object.values(POOLS)
+export const ALL_POOLS = [...POOL_LIST, FANTASY]
 
 // Tiles shown on the landing page, including ones not built yet.
 export const COMING_SOON = [

@@ -15,7 +15,10 @@ const ALL_TABS = [
 ]
 
 export default function Nav({ pool }) {
-  const tabs = ALL_TABS.filter(
+  // A pool can define its own tab list (the fantasy league does); otherwise
+  // fall back to the standard point-pool tabs, filtered by feature flags.
+  const source = pool.tabs || ALL_TABS
+  const tabs = source.filter(
     (t) => (!t.flag || pool[t.flag]) && !pool.hiddenTabs.includes(t.slug)
   )
 

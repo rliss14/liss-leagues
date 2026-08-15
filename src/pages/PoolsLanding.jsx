@@ -1,8 +1,8 @@
 import { Link } from 'react-router-dom'
-import { POOL_LIST, COMING_SOON } from '../lib/pools'
+import { ALL_POOLS, COMING_SOON } from '../lib/pools'
 
 const TILES = [
-  ...POOL_LIST.map((p) => ({
+  ...ALL_POOLS.map((p) => ({
     name: p.name,
     path: p.basePath,
     badge: p.badge,
