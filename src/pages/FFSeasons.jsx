@@ -37,6 +37,7 @@ export default function FFSeasons() {
   }, [league.id])
 
   const crowns = useMemo(() => pointsCrownLookup(standings), [standings])
+  const former = useMemo(() => new Set(league.formerMembers || []), [league.formerMembers])
 
   const seasons = useMemo(
     () => [...new Set(standings.map((s) => s.season))].sort((a, b) => b - a),
@@ -133,7 +134,12 @@ export default function FFSeasons() {
               return (
                 <tr key={r.id || r.member} className="border-t border-mustard/10 hover:bg-felt-light/20">
                   <td className="px-2 sm:px-3 py-2 font-mono text-chalk/60">{r.reg_rank}</td>
-                  <td className="px-2 sm:px-3 py-2 font-medium whitespace-nowrap">
+                  <td
+                    className={`px-2 sm:px-3 py-2 font-medium whitespace-nowrap ${
+                      former.has(r.member) ? 'text-chalk/60' : ''
+                    }`}
+                    title={former.has(r.member) ? 'Former member' : undefined}
+                  >
                     {r.member}{' '}
                     {MEDALS[r.final_rank] && (
                       <span title={MEDAL_TITLES[r.final_rank]}>{MEDALS[r.final_rank]}</span>

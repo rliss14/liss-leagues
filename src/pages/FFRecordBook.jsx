@@ -207,7 +207,7 @@ export default function FFRecordBook() {
               {new Set(champs.map((c) => c.champion)).size}/{champs.length}
             </div>
             <div className="text-[11px] text-chalk/45">
-              Different champions in {champs.length} seasons. No repeat winners yet.
+              Different champions in {champs.length} seasons.
             </div>
           </div>
         </div>

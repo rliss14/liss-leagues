@@ -29,6 +29,7 @@ export default function FFMembers() {
   const [weekly, setWeekly] = useState([])
   const [err, setErr] = useState(null)
   const [sort, setSort] = useState('winPct')
+  const [showFormer, setShowFormer] = useState(true)
 
   useEffect(() => {
     getFFStandings(league.id).then(setStandings).catch((e) => setErr(e.message))
@@ -43,8 +44,13 @@ export default function FFMembers() {
   )
   const bestWeeks = useMemo(() => bestWeekByMember(weekly), [weekly])
 
+  const former = useMemo(
+    () => new Set(league.formerMembers || []),
+    [league.formerMembers]
+  )
+
   const sorted = useMemo(() => {
-    const list = [...summaries]
+    const list = showFormer ? [...summaries] : summaries.filter((m) => !former.has(m.member))
     if (sort === 'name') return list.sort((a, b) => a.member.localeCompare(b.member))
     if (sort === 'pf') return list.sort((a, b) => b.pf - a.pf)
     if (sort === 'points')
@@ -58,7 +64,7 @@ export default function FFMembers() {
           b.winPct - a.winPct
       )
     return list.sort((a, b) => b.winPct - a.winPct || b.pf - a.pf)
-  }, [summaries, sort])
+  }, [summaries, sort, showFormer, former])
 
   return (
     <div className="space-y-5">
@@ -87,6 +93,18 @@ export default function FFMembers() {
               {label}
             </button>
           ))}
+          {former.size > 0 && (
+            <button
+              onClick={() => setShowFormer((v) => !v)}
+              className={`px-3 py-1.5 rounded-full border transition-colors ${
+                showFormer
+                  ? 'border-mustard/30 text-chalk/70 hover:border-mustard/60'
+                  : 'bg-mustard text-felt-dark border-mustard font-semibold'
+              }`}
+            >
+              {showFormer ? 'Hide former' : 'Current only'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -94,7 +112,12 @@ export default function FFMembers() {
 
       <div className="grid gap-3 sm:grid-cols-2">
         {sorted.map((m) => (
-          <div key={m.member} className="felt-panel rounded-xl p-4 space-y-3">
+          <div
+            key={m.member}
+            className={`felt-panel rounded-xl p-4 space-y-3 ${
+              former.has(m.member) ? 'opacity-70' : ''
+            }`}
+          >
             <div className="flex items-baseline justify-between gap-2">
               <div className="display text-xl text-chalk">
                 {m.member}
@@ -123,8 +146,11 @@ export default function FFMembers() {
                   </span>
                 )}
               </div>
-              <div className="text-[10px] uppercase tracking-wider text-chalk/40">
+              <div className="text-[10px] uppercase tracking-wider text-chalk/40 text-right shrink-0">
                 {m.seasons} season{m.seasons === 1 ? '' : 's'}
+                {former.has(m.member) && (
+                  <div className="text-chalk/30 normal-case tracking-normal">former member</div>
+                )}
               </div>
             </div>
 

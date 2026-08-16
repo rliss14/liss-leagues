@@ -143,7 +143,7 @@ export default function FFHome() {
           </div>
           <p className="text-xs text-chalk/45">
             {champs.length} seasons, {new Set(champs.map((c) => c.champion)).size} different
-            champions — nobody has repeated.
+            champions.
           </p>
         </section>
       )}

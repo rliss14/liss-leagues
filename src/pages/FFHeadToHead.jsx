@@ -3,6 +3,17 @@ import { getFFWeekly } from '../lib/ffQueries'
 import { headToHead, opponentBreakdown, rivalryRecords } from '../lib/ffStats'
 import { usePool } from '../components/PoolLayout'
 
+const COLUMNS = [
+  { key: 'opponent', label: 'Opponent', get: (r) => r.opponent.toLowerCase(), defaultDir: 'asc' },
+  // Sorting by "record" means win differential — 12-4 outranks 8-2.
+  { key: 'record', label: 'Record', get: (r) => r.w - r.l, numeric: true },
+  { key: 'pct', label: 'Win %', get: (r) => r.pct, numeric: true },
+  { key: 'games', label: 'Games', get: (r) => r.games, numeric: true, hideOnMobile: true },
+  { key: 'pf', label: 'PF', get: (r) => r.pf, numeric: true, hideOnMobile: true },
+  { key: 'pa', label: 'PA', get: (r) => r.pa, numeric: true, hideOnMobile: true },
+  { key: 'diff', label: 'Diff', get: (r) => r.diff, numeric: true }
+]
+
 function RecordCell({ r }) {
   const label = `${r.w}-${r.l}${r.t ? `-${r.t}` : ''}`
   const tone =
@@ -29,6 +40,7 @@ export default function FFHeadToHead() {
   const [weekly, setWeekly] = useState([])
   const [member, setMember] = useState('')
   const [scope, setScope] = useState('regular')
+  const [sort, setSort] = useState({ key: 'games', dir: 'desc' })
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState(null)
 
@@ -46,11 +58,31 @@ export default function FFHeadToHead() {
     if (h2h.members.length && !h2h.members.includes(member)) setMember(h2h.members[0])
   }, [h2h.members, member])
 
-  const rows = useMemo(
-    () => (member ? opponentBreakdown(h2h, member) : []),
-    [h2h, member]
-  )
+  const rows = useMemo(() => {
+    if (!member) return []
+    const list = opponentBreakdown(h2h, member)
+    const col = COLUMNS.find((c) => c.key === sort.key) || COLUMNS[0]
+    const factor = sort.dir === 'asc' ? 1 : -1
+    return [...list].sort((a, b) => {
+      const av = col.get(a)
+      const bv = col.get(b)
+      const cmp = col.numeric ? av - bv : String(av).localeCompare(String(bv))
+      // Most-played first is the stable fallback, then alphabetical.
+      if (cmp === 0) return b.games - a.games || a.opponent.localeCompare(b.opponent)
+      return cmp * factor
+    })
+  }, [h2h, member, sort])
+
+  function toggleSort(key) {
+    const col = COLUMNS.find((c) => c.key === key)
+    setSort((prev) =>
+      prev.key === key
+        ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' }
+        : { key, dir: col?.defaultDir || (col?.numeric ? 'desc' : 'asc') }
+    )
+  }
   const rivalries = useMemo(() => rivalryRecords(h2h), [h2h])
+  const former = useMemo(() => new Set(league.formerMembers || []), [league.formerMembers])
 
   const totals = useMemo(() => {
     if (!rows.length) return null
@@ -153,7 +185,9 @@ export default function FFHeadToHead() {
               onChange={(e) => setMember(e.target.value)}
             >
               {h2h.members.map((m) => (
-                <option key={m} value={m}>{m}</option>
+                <option key={m} value={m}>
+                  {m}{former.has(m) ? ' (former)' : ''}
+                </option>
               ))}
             </select>
           </div>
@@ -162,19 +196,41 @@ export default function FFHeadToHead() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-mustard text-left text-[10px] uppercase tracking-wider">
-                  <th className="px-3 py-2">Opponent</th>
-                  <th className="px-3 py-2">Record</th>
-                  <th className="px-3 py-2">Win %</th>
-                  <th className="px-3 py-2 hidden sm:table-cell">Games</th>
-                  <th className="px-3 py-2 hidden sm:table-cell">PF</th>
-                  <th className="px-3 py-2 hidden sm:table-cell">PA</th>
-                  <th className="px-3 py-2">Diff</th>
+                  {COLUMNS.map((c) => {
+                    const active = sort.key === c.key
+                    return (
+                      <th
+                        key={c.key}
+                        className={`px-3 py-2 ${c.hideOnMobile ? 'hidden sm:table-cell' : ''}`}
+                      >
+                        <button
+                          onClick={() => toggleSort(c.key)}
+                          className={`flex items-center gap-1 uppercase tracking-wider hover:text-mustard-light ${
+                            active ? 'text-mustard' : 'text-mustard/60'
+                          }`}
+                          title={`Sort by ${c.label}`}
+                        >
+                          {c.label}
+                          <span className={active ? 'opacity-100' : 'opacity-0'}>
+                            {sort.dir === 'asc' ? '▲' : '▼'}
+                          </span>
+                        </button>
+                      </th>
+                    )
+                  })}
                 </tr>
               </thead>
               <tbody>
                 {rows.map((r) => (
                   <tr key={r.opponent} className="border-t border-mustard/10 hover:bg-felt-light/20">
-                    <td className="px-3 py-2 font-medium">{r.opponent}</td>
+                    <td
+                      className={`px-3 py-2 font-medium ${
+                        former.has(r.opponent) ? 'text-chalk/60' : ''
+                      }`}
+                      title={former.has(r.opponent) ? 'Former member' : undefined}
+                    >
+                      {r.opponent}
+                    </td>
                     <td className="px-3 py-2"><RecordCell r={r} /></td>
                     <td className="px-3 py-2 font-mono text-chalk/70">
                       {(r.pct * 100).toFixed(0)}%
