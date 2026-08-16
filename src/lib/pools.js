@@ -55,26 +55,55 @@ export const POOLS = {
   }
 }
 
-// The fantasy league isn't a point pool — different data, different tabs.
-export const FANTASY = {
-  id: 'EALFFL',
-  name: 'Edward A. Liss Fantasy Football League',
-  shortName: 'EALFFL',
-  basePath: '/EALFFL',
-  badge: '🏆',
-  blurb: 'Twelve managers. One Edward A. Liss Memorial Trophy.',
-  live: true,
-  isFantasy: true,
-  hiddenTabs: [],
-  tabs: [
-    { slug: '', label: 'League', end: true },
-    { slug: 'records', label: 'Record Book' },
-    { slug: 'members', label: 'Members' }
-  ]
+// Fantasy leagues aren't point pools — different data, different tabs.
+const FANTASY_TABS = [
+  { slug: '', label: 'League', end: true },
+  { slug: 'seasons', label: 'Seasons' },
+  { slug: 'records', label: 'Record Book' },
+  { slug: 'members', label: 'Members' },
+  { slug: 'h2h', label: 'Head to Head' }
+]
+
+export const FANTASY_LEAGUES = {
+  EALFFL: {
+    id: 'EALFFL',
+    name: 'Edward A. Liss Fantasy Football League',
+    shortName: 'EALFFL',
+    basePath: '/EALFFL',
+    badge: '🏆',
+    blurb: 'Twelve managers. One Edward A. Liss Memorial Trophy.',
+    trophyName: 'Edward A. Liss Memorial Trophy',
+    commissioner: 'Ryan',
+    founded: 2022,
+    live: true,
+    isFantasy: true,
+    hiddenTabs: [],
+    tabs: FANTASY_TABS,
+    // 2022 playoff rounds ran two weeks each.
+    twoWeekPlayoffSeasons: [2022]
+  },
+  MFFL: {
+    id: 'MFFL',
+    name: 'Manteno Fantasy Football League',
+    shortName: 'MFFL',
+    basePath: '/MFFL',
+    badge: '🏈',
+    blurb: 'Running since 2011. The league with actual history.',
+    trophyName: 'MFFL Championship',
+    commissioner: 'Jack',
+    founded: 2011,
+    live: true,
+    isFantasy: true,
+    hiddenTabs: [],
+    tabs: FANTASY_TABS,
+    twoWeekPlayoffSeasons: []
+  }
 }
 
+export const FANTASY_LIST = Object.values(FANTASY_LEAGUES)
+
 export const POOL_LIST = Object.values(POOLS)
-export const ALL_POOLS = [...POOL_LIST, FANTASY]
+export const ALL_POOLS = [...POOL_LIST, ...FANTASY_LIST]
 
 // Tiles shown on the landing page, including ones not built yet.
 export const COMING_SOON = [

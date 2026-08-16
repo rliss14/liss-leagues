@@ -103,14 +103,39 @@ Same tabs, minus Season Awards and the Live Season Tracker (no consistency payou
 squares), no website fee, and week 18 has no guaranteed winner — leftover pot rolls to the squares
 board rather than paying out or carrying to next season.
 
-### EALFFL — Edward A. Liss Fantasy Football League
+### Fantasy leagues
 
-A fantasy league archive, not a point pool. Data comes from ESPN exports pasted in once a year.
+Two archives, both driven by the same four pages. Data comes from ESPN via
+`espn-league-export.js` (the browser-console script), loaded once a year.
 
-- `/EALFFL` — champions, trophy case, and season standings (ordered by regular-season record,
-  with 🥇🥈🥉 marking final placement after playoffs)
-- `/EALFFL/records` — league-wide record book
-- `/EALFFL/members` — career résumé per member
+- **EALFFL** — Edward A. Liss Fantasy Football League, est. 2022, commissioner Ryan
+- **MFFL** — Manteno Fantasy Football League, est. 2011, commissioner Jack
+
+Add another league by adding an entry to `FANTASY_LEAGUES` in `src/lib/pools.js` and seeding
+`ff_standings` / `ff_playoffs` / `ff_weekly` with that league's id. No page changes needed.
+
+#### EALFFL
+
+- `/EALFFL` and `/MFFL` — champions and trophy case
+- `/<league>/seasons` — season standings, sortable by any column
+- `/<league>/records` — league-wide record book
+- `/<league>/members` — career résumé per member
+- `/<league>/h2h` — head-to-head records, rivalries, and per-member breakdown
+
+Head-to-head defaults to regular season only. The playoff toggle includes the whole consolation
+ladder, since `ff_weekly` stores every scheduled game — useful for "have these two ever played",
+less so for a clean record.
+
+Migrations: 04 creates the tables and seeds EALFFL, 05 adds EALFFL weekly scores, 06 adds the
+`league` column and seeds MFFL (2011–2025).
+
+**MFFL notes:** the regular season ran 13 weeks through 2020 and 14 from 2021, so season totals
+aren't directly comparable across that line. Chris abandoned his 2011 team from week 13 — those
+0.00 weeks are excluded from the fewest-points record. Two season totals (Alex 2016, Jake 2017)
+differ slightly from the sum of their weekly scores, which is ESPN's own data, left as-is.
+
+Podium markers are 🏆 champion, 🥈 runner-up, 🥉 third place — used consistently across all
+four pages. They're defined once in `src/lib/ffStats.js` (`MEDALS`).
 
 Migration 04 creates `ff_standings` and `ff_playoffs` **and seeds the 2022–2025 seasons**, so this
 works as soon as you run it — no data entry needed for those years.
@@ -119,8 +144,9 @@ works as soon as you run it — no data entry needed for those years.
 margins from that postseason aren't comparable to later single-week seasons, so playoff scoring
 records exclude 2022. Season totals include it.
 
-**Not yet available:** regular-season weekly scores. ESPN's standings export only has season
-totals, so "highest one-week score" currently uses playoff games only.
+**Weekly scores** come from migration 05, exported via `espn-league-export.js` (the browser-console
+script). This is what powers single-week records — most/fewest points in a week, biggest blowout,
+closest game — and the "Best week" figure on the Members page.
 
 To unhide a tab, remove its slug from `hiddenTabs` in `src/lib/pools.js`. To change a target score,
 payout, or entry fee, edit the same file — every page reads from it.
