@@ -1,3 +1,5 @@
+import { normalizeTeam } from './teams'
+
 // Core point-pool status logic, shared by every pool. The target score is
 // passed in rather than hardcoded, so the same rules drive 33 and 25.
 
@@ -45,11 +47,13 @@ export function absDiffFromTarget(score, target) {
  * closest to target across all finalized games. Empty if anyone hit it exactly.
  */
 export function findClosestTeams(games, target) {
+  // Abbreviations are normalized so relocated franchises (OAK/LV) match
+  // whatever the assignment used.
   const finals = []
   games.forEach((g) => {
     if (g.status !== 'post') return
     ;[g.home, g.away].forEach((t) => {
-      if (t && t.score != null) finals.push({ abbr: t.abbreviation, score: t.score })
+      if (t && t.score != null) finals.push({ abbr: normalizeTeam(t.abbreviation), score: t.score })
     })
   })
   if (!finals.length) return new Set()

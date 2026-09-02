@@ -50,8 +50,8 @@ export const POOLS = {
         { label: 'Final score', add: 4 }
       ]
     },
-    // No history yet, so these stay unlinked until there's data to show.
-    hiddenTabs: ['winners', 'record-book', 'squares']
+    // Squares stays unlinked until the board goes up.
+    hiddenTabs: ['squares']
   }
 }
 

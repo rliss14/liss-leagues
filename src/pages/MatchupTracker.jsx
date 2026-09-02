@@ -128,15 +128,15 @@ export default function MatchupTracker() {
               <TeamCard
                 team={g.away}
                 gameStatus={g.status}
-                ownerName={ownerFor[g.away?.abbreviation]}
-                isClosest={closestTeams.has(g.away?.abbreviation)}
+                ownerName={ownerFor[normalizeTeam(g.away?.abbreviation)]}
+                isClosest={closestTeams.has(normalizeTeam(g.away?.abbreviation))}
                 target={pool.target}
               />
               <TeamCard
                 team={g.home}
                 gameStatus={g.status}
-                ownerName={ownerFor[g.home?.abbreviation]}
-                isClosest={closestTeams.has(g.home?.abbreviation)}
+                ownerName={ownerFor[normalizeTeam(g.home?.abbreviation)]}
+                isClosest={closestTeams.has(normalizeTeam(g.home?.abbreviation))}
                 target={pool.target}
               />
             </div>

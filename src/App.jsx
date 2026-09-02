@@ -16,7 +16,7 @@ import FFRecordBook from './pages/FFRecordBook'
 import FFMembers from './pages/FFMembers'
 import FFHeadToHead from './pages/FFHeadToHead'
 import DataEntry from './pages/DataEntry'
-import PasscodeGate from './components/PasscodeGate'
+import AuthGate from './components/AuthGate'
 
 // Netlify serves paths case-sensitively, so /nfl33 would 404 without this.
 function CaseRedirect() {
@@ -47,9 +47,9 @@ export default function App() {
             <Route
               path="setup"
               element={
-                <PasscodeGate>
+                <AuthGate>
                   <DataEntry />
-                </PasscodeGate>
+                </AuthGate>
               }
             />
           </Route>

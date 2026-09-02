@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { getSeasons, getAssignments, getResults } from '../lib/supabaseQueries'
 import { fetchWeekScoreboard } from '../lib/espn'
-import { normalizeTeam } from '../lib/teams'
+import { normalizeTeam, teamForSeason } from '../lib/teams'
 import { usePool } from '../components/PoolLayout'
 
 const WEEKS = Array.from({ length: 18 }, (_, i) => i + 1)
@@ -65,9 +65,11 @@ export default function TeamGrid() {
         games.forEach((g) => {
           ;[g.home, g.away].forEach((t) => {
             if (!t) return
-            playing.add(t.abbreviation)
+            // Normalize ESPN's side too: in 2019 it says OAK, while an
+            // assignment may say LV. Same franchise, so both become LV.
+            playing.add(normalizeTeam(t.abbreviation))
             if (g.status === 'post' && t.score != null) {
-              const k = `${w}|${t.abbreviation}`
+              const k = `${w}|${normalizeTeam(t.abbreviation)}`
               if (scoreMap[k] == null) scoreMap[k] = t.score
             }
           })
@@ -81,6 +83,11 @@ export default function TeamGrid() {
 
     load().catch((e) => setErr(e.message)).finally(() => setLoading(false))
   }, [seasonId, seasons])
+
+  const activeSeason = useMemo(
+    () => seasons.find((s) => s.id === seasonId) || null,
+    [seasons, seasonId]
+  )
 
   const { members, cell } = useMemo(() => {
     const byMember = {}
@@ -182,14 +189,14 @@ export default function TeamGrid() {
                       key={w}
                       title={
                         bye
-                          ? `${team} — bye week`
+                          ? `${teamForSeason(team, activeSeason?.start_year)} — bye week`
                           : team && score != null
-                          ? `${team} scored ${score}`
+                          ? `${teamForSeason(team, activeSeason?.start_year)} scored ${score}`
                           : team || ''
                       }
                       className={`px-2 py-1.5 text-center font-mono ${cls}`}
                     >
-                      {team || '—'}
+                      {team ? teamForSeason(team, activeSeason?.start_year) : '—'}
                     </td>
                   )
                 })}

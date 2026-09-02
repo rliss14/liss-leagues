@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { getSeasons, getSquares, upsertSquares, upsertSquaresConfig } from '../lib/supabaseQueries'
 import { usePool } from '../components/PoolLayout'
 import PasteTable from '../components/PasteTable'
+import AuthGate from '../components/AuthGate'
 import { money } from '../lib/format'
 
 const SIZE = 10
@@ -251,6 +252,7 @@ export default function Squares() {
       </button>
 
       {editing && (
+        <AuthGate>
         <div className="space-y-5">
           <div className="felt-panel rounded-xl p-4 space-y-3">
             <div className="display text-lg">Square names</div>
@@ -294,6 +296,7 @@ export default function Squares() {
             </button>
           </div>
         </div>
+        </AuthGate>
       )}
     </div>
   )

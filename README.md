@@ -129,6 +129,11 @@ less so for a clean record.
 Migrations: 04 creates the tables and seeds EALFFL, 05 adds EALFFL weekly scores, 06 adds the
 `league` column and seeds MFFL (2011–2025).
 
+**Relocated franchises.** OAK/LV, SD/LAC and STL/LAR are treated as the same franchise, so a team
+assigned as LV still matches the OAK that ESPN returns for pre-2020 seasons. The Team Grid displays
+whichever code was correct for that season, so a 2019 grid reads OAK. See `RELOCATIONS` in
+`src/lib/teams.js`.
+
 **MFFL notes:** the regular season ran 13 weeks through 2020 and 14 from 2021, so season totals
 aren't directly comparable across that line. Chris abandoned his 2011 team from week 13 — those
 0.00 weeks are excluded from the fewest-points record. Two season totals (Alex 2016, Jake 2017)
@@ -190,16 +195,26 @@ feed into Total Paid Out and Most Money Won on the Record Book page. A season ma
 
 To change the amounts, edit `AWARD_PAYOUT` at the top of `src/lib/awards.js`.
 
-## The Setup passcode
+## Security — sign-in for Setup
 
-Setup has no nav link — reach it by typing `lissleagues.com/NFL33/setup`. It then asks for the
-passcode set in the `VITE_SETUP_PASSCODE` environment variable in Netlify. It stays unlocked until
-you close the browser tab.
+Setup requires a real Supabase login, and the database enforces it. Public visitors can read
+everything; only a signed-in user can write.
 
-To change it: update the variable in Netlify, then **Trigger deploy → Clear cache and deploy site**
-(env vars are baked in at build time).
+**One-time setup, in this order:**
 
-**What this does and doesn't do.** It keeps friends from stumbling into the data-entry screen and
-overwriting a season. It is not real security: the Supabase anon key is present in the site's
-JavaScript, so someone determined could write to the database directly, bypassing the app. Supabase
-Auth plus row-level security is the real fix when you want it.
+1. In the Supabase dashboard, go to **Authentication → Users → Add user**. Enter your email and a
+   password, and tick "Auto Confirm User" so you don't need to click an email link.
+2. Run `supabase/migration-07.sql` in the SQL Editor. This drops the old open policies and replaces
+   them with public-read / authenticated-write.
+3. Open `lissleagues.com/NFL33/setup` (still unlinked from the nav) and sign in with that account.
+
+Order matters: if you run the migration before creating the user, you'll lock yourself out of
+writing until you add one.
+
+`VITE_SETUP_PASSCODE` is no longer used and can be deleted from Netlify.
+
+**What changed.** Previously the anon key — which ships inside the site's JavaScript — could write
+to every table, so anyone who opened DevTools could have overwritten a season. Now the database
+rejects unauthenticated writes regardless of what the app allows.
+
+To add another admin, add another user in the Supabase dashboard. Any signed-in user can write.

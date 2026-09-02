@@ -10,7 +10,7 @@ function finalScoresByTeam(games) {
   const map = {}
   games.forEach((g) => {
     ;[g.home, g.away].forEach((t) => {
-      if (t && g.status === 'post') map[t.abbreviation] = t.score
+      if (t && g.status === 'post') map[normalizeTeam(t.abbreviation)] = t.score
     })
   })
   return map

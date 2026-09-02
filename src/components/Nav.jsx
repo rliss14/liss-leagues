@@ -4,8 +4,8 @@ import { NavLink, Link } from 'react-router-dom'
 // listed in pool.hiddenTabs stays routable but unlinked.
 const ALL_TABS = [
   { slug: '', label: 'Matchups', end: true },
-  { slug: 'live', label: 'Live Season', flag: 'hasLiveTracker' },
   { slug: 'teams', label: 'Team Grid' },
+  { slug: 'live', label: 'Live Season', flag: 'hasLiveTracker' },
   { slug: 'winners', label: 'Winners' },
   { slug: 'awards', label: 'Season Awards', flag: 'hasSeasonAwards' },
   { slug: 'record-book', label: 'Record Book' },
