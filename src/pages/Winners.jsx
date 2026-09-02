@@ -95,7 +95,7 @@ export default function Winners() {
           {[
             ['all', 'All'],
             ['hit33', `${pool.target}s`],
-            ['week18', 'Wk18 Payouts']
+            ['week18', pool.secondaryPayoutFilter || 'Wk18 Payouts']
           ].map(([key, label]) => (
             <button
               key={key}
@@ -172,7 +172,7 @@ export default function Winners() {
                         : 'bg-mustard/30 text-mustard'
                     }`}
                   >
-                    {isTargetHit(r) ? pool.target : 'Wk18'}
+                    {isTargetHit(r) ? pool.target : pool.secondaryPayoutLabel || 'Wk18'}
                   </span>
                 </td>
               </tr>

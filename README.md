@@ -163,6 +163,19 @@ payout, or entry fee, edit the same file — every page reads from it.
 - ⏳ NFL25 and Golf pool — placeholder tiles on the landing page. The schema and routing are
   structured so each can be added as its own set of tables and its own `/POOLNAME` route without touching NFL33.
 
+## Which week the board shows
+
+The Matchups and Live Season tabs work out the current week themselves from the NFL schedule.
+ESPN rolls its own scoreboard over on Tuesday, which is a day too early — so the app takes ESPN's
+week, looks at the previous week's last kickoff, and stays on that week until **2am Wednesday
+local time**. Monday night games finish late, and Tuesday is left free for reviewing the week
+that just ended.
+
+Picking a week from the dropdown pins it; a "Back to current week" link appears to un-pin.
+
+The `current_week` value in Setup is now only a fallback for when ESPN is unreachable, so it no
+longer needs updating every week.
+
 ## Notes on the ESPN data
 
 - Uses `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard` — free, no key, unofficial

@@ -129,7 +129,12 @@ function SeasonsTab({ pool, onSaved, setErr, existing }) {
     <div className="space-y-3 max-w-md">
       <p className="text-chalk/70 text-sm">
         Add each season once (e.g. label "2023-24", start year 2023). Mark the one currently
-        in progress as "current" — that's what the Matchup Tracker and Live Tracker use.
+        in progress as "current" — that's what the Matchups and Live Season tabs read.
+        <br />
+        <span className="text-chalk/50">
+          The week now advances on its own from the NFL schedule, turning over at 2am Wednesday.
+          The value below is only a fallback for when ESPN can't be reached.
+        </span>
       </p>
       <input className="w-full bg-felt-dark/60 border border-mustard/30 rounded px-2 py-1.5 text-sm" placeholder="Season label (e.g. 2023-24)" value={label} onChange={(e) => setLabel(e.target.value)} />
       <input className="w-full bg-felt-dark/60 border border-mustard/30 rounded px-2 py-1.5 text-sm" placeholder="Start year (e.g. 2023)" value={startYear} onChange={(e) => setStartYear(e.target.value)} />
@@ -138,7 +143,7 @@ function SeasonsTab({ pool, onSaved, setErr, existing }) {
         This is the current season
       </label>
       {isCurrent && (
-        <input className="w-full bg-felt-dark/60 border border-mustard/30 rounded px-2 py-1.5 text-sm" placeholder="Current week (1-18)" value={currentWeek} onChange={(e) => setCurrentWeek(e.target.value)} />
+        <input className="w-full bg-felt-dark/60 border border-mustard/30 rounded px-2 py-1.5 text-sm" placeholder="Fallback week (1-18)" value={currentWeek} onChange={(e) => setCurrentWeek(e.target.value)} />
       )}
       <button onClick={save} disabled={!label || !startYear} className="bg-mustard text-felt-dark font-semibold px-4 py-2 rounded-md disabled:opacity-40">
         Save season

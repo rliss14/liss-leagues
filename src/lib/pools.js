@@ -18,6 +18,9 @@ export const POOLS = {
     week18Guarantee: true,
     websiteFee: 20,
     signature: 'Ryan',
+    // Label for the non-hit payout type in the Winners table.
+    secondaryPayoutLabel: 'Wk18',
+    secondaryPayoutFilter: 'Wk18 Payouts',
     // Tabs hidden from the nav but still reachable by URL
     hiddenTabs: []
   },
@@ -37,6 +40,8 @@ export const POOLS = {
     week18Guarantee: false,
     websiteFee: 0,
     signature: 'John',
+    secondaryPayoutLabel: 'Squares',
+    secondaryPayoutFilter: 'Squares Payouts',
     squaresRules: {
       reserve: 320,          // $10 per member, set aside at entry
       squaresPerMember: 3,

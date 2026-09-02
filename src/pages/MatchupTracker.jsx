@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { fetchWeekScoreboard, seasonMismatch } from '../lib/espn'
+import { fetchWeekScoreboard, seasonMismatch, resolveCurrentWeek } from '../lib/espn'
 import { getCurrentSeason, getAssignments } from '../lib/supabaseQueries'
 import { findClosestTeams } from '../lib/scoring'
 import { normalizeTeam } from '../lib/teams'
@@ -10,6 +10,9 @@ export default function MatchupTracker() {
   const pool = usePool()
   const [season, setSeason] = useState(null)
   const [week, setWeek] = useState(1)
+  // Once the person picks a week themselves, stop auto-advancing.
+  const [pinned, setPinned] = useState(false)
+  const [autoWeek, setAutoWeek] = useState(null)
   const [games, setGames] = useState([])
   const [assignments, setAssignments] = useState([])
   const [loading, setLoading] = useState(true)
@@ -17,9 +20,18 @@ export default function MatchupTracker() {
 
   useEffect(() => {
     getCurrentSeason(pool.id)
-      .then((s) => {
+      .then(async (s) => {
         setSeason(s)
-        if (s) setWeek(s.current_week || 1)
+        if (!s) return
+        // Start from the stored value so something renders immediately,
+        // then let ESPN's schedule correct it.
+        setWeek(s.current_week || 1)
+        const resolved = await resolveCurrentWeek(s.start_year, s.current_week || 1)
+        setAutoWeek(resolved)
+        setPinned((p) => {
+          if (!p) setWeek(resolved)
+          return p
+        })
       })
       .catch((e) => setErr(e.message))
   }, [pool.id])
@@ -71,7 +83,10 @@ export default function MatchupTracker() {
         <select
           className="bg-felt-dark border border-mustard/40 rounded px-3 py-1.5 text-sm"
           value={week}
-          onChange={(e) => setWeek(Number(e.target.value))}
+          onChange={(e) => {
+            setWeek(Number(e.target.value))
+            setPinned(true)
+          }}
         >
           {Array.from({ length: 18 }, (_, i) => i + 1).map((w) => (
             <option key={w} value={w}>Week {w}</option>
@@ -92,6 +107,18 @@ export default function MatchupTracker() {
           Nobody landed on {pool.target} — closest team{closestTeams.size > 1 ? 's' : ''} flagged below for the
           guaranteed payout.
         </div>
+      )}
+
+      {pinned && autoWeek != null && autoWeek !== week && (
+        <button
+          onClick={() => {
+            setWeek(autoWeek)
+            setPinned(false)
+          }}
+          className="text-xs text-mustard hover:text-mustard-light underline"
+        >
+          Back to current week ({autoWeek})
+        </button>
       )}
 
       {err && <div className="text-brick-light">{err}</div>}

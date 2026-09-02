@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { fetchWeekScoreboard } from '../lib/espn'
+import { fetchWeekScoreboard, resolveCurrentWeek } from '../lib/espn'
 import { getCurrentSeason, getAssignments } from '../lib/supabaseQueries'
 import { absDiffFromTarget } from '../lib/scoring'
 import { normalizeTeam } from '../lib/teams'
@@ -33,9 +33,12 @@ export default function LiveTracker() {
     setLoading(true)
     setErr(null)
 
-    const currentWeek = season.current_week || 1
-
     async function run() {
+      // Same 2am-Wednesday rule as the Matchups tab, so the two agree.
+      const currentWeek = await resolveCurrentWeek(
+        season.start_year,
+        season.current_week || 1
+      )
       const assignments = await getAssignments(season.id)
       const weeks = Array.from({ length: currentWeek }, (_, i) => i + 1)
 
