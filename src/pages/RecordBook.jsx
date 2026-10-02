@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { getAllResults, getSeasons } from '../lib/supabaseQueries'
+import { getAllResults, getSeasons, getCurrentSeason } from '../lib/supabaseQueries'
+import { deriveCurrentSeason, mergeResults } from '../lib/deriveSeason'
 import { computeSeasonAwards, awardMoneyByMember, AWARD_PAYOUT } from '../lib/awards'
 import { money, isTargetHit } from '../lib/format'
 import { normalizeTeam } from '../lib/teams'
@@ -45,8 +46,23 @@ export default function RecordBook() {
   const [err, setErr] = useState(null)
 
   useEffect(() => {
-    getAllResults(pool.id).then(setResults).catch((e) => setErr(e.message))
-    getSeasons(pool.id).then(setSeasons).catch((e) => setErr(e.message))
+    let cancelled = false
+    getSeasons(pool.id).then((s) => !cancelled && setSeasons(s)).catch((e) => setErr(e.message))
+
+    async function load() {
+      const stored = await getAllResults(pool.id)
+      if (cancelled) return
+      setResults(stored)
+
+      const season = await getCurrentSeason(pool.id)
+      if (!season || cancelled) return
+      const derived = await deriveCurrentSeason(pool, season)
+      if (cancelled || !derived.length) return
+      setResults(mergeResults(stored, derived))
+    }
+
+    load().catch((e) => setErr(e.message))
+    return () => { cancelled = true }
   }, [pool.id])
 
   // Season awards are derived, not stored.

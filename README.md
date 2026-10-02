@@ -163,6 +163,24 @@ payout, or entry fee, edit the same file — every page reads from it.
 - ⏳ NFL25 and Golf pool — placeholder tiles on the landing page. The schema and routing are
   structured so each can be added as its own set of tables and its own `/POOLNAME` route without touching NFL33.
 
+## Where Winners and the Record Book get their data
+
+Past seasons come from `weekly_results` — the rows pasted in through Setup.
+
+The **season in progress is worked out automatically** from ESPN's final scores plus this year's
+assignments, so a 33 in week 1 shows up on Winners without anyone entering it. Payouts are derived
+from the pool rules rather than typed: base pot is `entry.perWeek x 32`, a week with no hit carries
+forward, a hit takes the accumulated pot, several hits split it evenly, and week 18 pays the closest
+team in pools that guarantee a winner.
+
+Two rules keep this safe:
+
+- A week is only settled once **every** game in it is final. A live week has no winner yet.
+- A stored row always beats a derived one for the same season/week/member, so a manual correction
+  or an off-book payout entered in Setup sticks.
+
+At season's end, paste the final results into Setup as usual and the stored rows quietly take over.
+
 ## Which week the board shows
 
 The Matchups and Live Season tabs work out the current week themselves from the NFL schedule.

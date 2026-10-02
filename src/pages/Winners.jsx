@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { getAllResults } from '../lib/supabaseQueries'
+import { getAllResults, getCurrentSeason } from '../lib/supabaseQueries'
+import { deriveCurrentSeason, mergeResults } from '../lib/deriveSeason'
 import { money, isTargetHit } from '../lib/format'
 import { normalizeTeam } from '../lib/teams'
 import { usePool } from '../components/PoolLayout'
@@ -32,8 +33,29 @@ export default function Winners() {
   // Default view: newest season first, then earliest week.
   const [sort, setSort] = useState({ key: 'season', dir: 'desc' })
 
+  const [live, setLive] = useState(false)
+
   useEffect(() => {
-    getAllResults(pool.id).then(setRows).catch((e) => setErr(e.message))
+    let cancelled = false
+    setLive(false)
+
+    async function load() {
+      const stored = await getAllResults(pool.id)
+      if (cancelled) return
+      setRows(stored)
+
+      // The season in progress isn't typed in yet, so work it out from the
+      // live scores and this year's assignments.
+      const season = await getCurrentSeason(pool.id)
+      if (!season || cancelled) return
+      const derived = await deriveCurrentSeason(pool, season)
+      if (cancelled || !derived.length) return
+      setRows(mergeResults(stored, derived))
+      setLive(true)
+    }
+
+    load().catch((e) => setErr(e.message))
+    return () => { cancelled = true }
   }, [pool.id])
 
   const allWinners = useMemo(() => rows.filter(isWinner), [rows])
@@ -88,7 +110,10 @@ export default function Winners() {
       <div className="flex items-end justify-between flex-wrap gap-3">
         <div>
           <h1 className="display text-3xl text-mustard">Winners</h1>
-          <p className="text-sm text-chalk/60">Every paid result, all seasons.</p>
+          <p className="text-sm text-chalk/60">
+            Every paid result, all seasons.
+            {live && <span className="text-mustard"> Current season updates automatically.</span>}
+          </p>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap text-xs">

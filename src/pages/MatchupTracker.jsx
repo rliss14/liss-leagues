@@ -59,6 +59,32 @@ export default function MatchupTracker() {
 
   const mismatch = useMemo(() => seasonMismatch(games), [games])
 
+  /**
+   * Games where a team is sitting on the number come first — a confirmed hit
+   * ahead of one that's still live, since a live score can still move.
+   * Everything else keeps ESPN's chronological order.
+   */
+  const sortedGames = useMemo(() => {
+    const rank = (g) => {
+      const teams = [g.home, g.away].filter(Boolean)
+      const onNumber = teams.filter((t) => Number(t.score) === pool.target)
+      if (!onNumber.length) return 2
+      return g.status === 'post' ? 0 : 1
+    }
+    return [...games]
+      .map((g, i) => ({ g, i, r: rank(g) }))
+      .sort((a, b) => a.r - b.r || a.i - b.i)
+      .map((x) => x.g)
+  }, [games, pool.target])
+
+  const onNumber = useMemo(
+    () =>
+      sortedGames
+        .flatMap((g) => [g.home, g.away])
+        .filter((t) => t && Number(t.score) === pool.target).length,
+    [sortedGames, pool.target]
+  )
+
   // Week 18 only: whoever finished closest to 33 still gets paid.
   const closestTeams = useMemo(
     () => (pool.week18Guarantee && week === 18 ? findClosestTeams(games, pool.target) : new Set()),
@@ -102,6 +128,16 @@ export default function MatchupTracker() {
         </div>
       )}
 
+      {onNumber > 0 && (
+        <div className="rounded-lg border border-mustard bg-mustard/15 p-3 text-sm">
+          <span className="font-mono text-mustard font-bold">{pool.target}</span>{' '}
+          <span className="text-chalk/85">
+            on the board — {onNumber} team{onNumber === 1 ? '' : 's'} sitting on the number.
+            Shown first below.
+          </span>
+        </div>
+      )}
+
       {week === 18 && closestTeams.size > 0 && (
         <div className="stat-card p-3 text-sm text-mustard">
           Nobody landed on {pool.target} — closest team{closestTeams.size > 1 ? 's' : ''} flagged below for the
@@ -125,7 +161,7 @@ export default function MatchupTracker() {
       {loading && <div className="text-chalk/60 text-sm">Loading live scores…</div>}
 
       <div className="grid gap-4 sm:grid-cols-2">
-        {games.map((g) => (
+        {sortedGames.map((g) => (
           <div key={g.id} className="felt-panel rounded-xl p-4 space-y-3">
             <div className="text-xs text-chalk/60 flex flex-wrap justify-between gap-2">
               <span>
